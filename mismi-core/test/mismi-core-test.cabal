@@ -1,4 +1,4 @@
-name:                  ambiata-mismi-core-test
+name:                  mismi-core-test
 version:               0.0.1
 cabal-version:         >= 1.8
 build-type:            Simple
@@ -10,9 +10,9 @@ library
                      , amazonka-core                   >= 1.3.6      && < 1.6
                      , ambiata-disorder-core
                      , ambiata-disorder-corpus
-                     , ambiata-mismi-core
-                     , ambiata-mismi-kernel
-                     , ambiata-mismi-kernel-test
+                     , mismi-core
+                     , mismi-kernel
+                     , mismi-kernel-test
                      , ambiata-p
                      , ambiata-x-eithert
                      , exceptions                      >= 0.6        && < 0.9

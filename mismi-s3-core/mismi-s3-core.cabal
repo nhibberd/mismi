@@ -1,4 +1,4 @@
-name:                  ambiata-mismi-s3-core
+name:                  mismi-s3-core
 version:               0.0.1
 license:               Apache-2.0
 author:                Ambiata <info@ambiata.com>
@@ -36,7 +36,7 @@ test-suite test
   build-depends:       base
                      , ambiata-disorder-core
                      , ambiata-disorder-corpus
-                     , ambiata-mismi-s3-core
+                     , mismi-s3-core
                      , ambiata-p
                      , attoparsec
                      , filepath                        >= 1.3        && < 1.5

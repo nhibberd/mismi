@@ -1,4 +1,4 @@
-name:                  ambiata-mismi-sqs-core-test
+name:                  mismi-sqs-core-test
 version:               0.0.1
 cabal-version:         >= 1.8
 build-type:            Simple
@@ -8,9 +8,9 @@ library
                        base                            >= 3          && < 5
                      , ambiata-disorder-core
                      , ambiata-disorder-corpus
-                     , ambiata-mismi-kernel
-                     , ambiata-mismi-kernel-test
-                     , ambiata-mismi-sqs-core
+                     , mismi-kernel
+                     , mismi-kernel-test
+                     , mismi-sqs-core
                      , ambiata-p
                      , text
                      , QuickCheck                      >= 2.7        && < 2.10

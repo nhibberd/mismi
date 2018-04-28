@@ -1,4 +1,4 @@
-name:                  ambiata-mismi-cli
+name:                  mismi-cli
 version:               0.0.1
 license:               Apache-2.0
 author:                Ambiata <info@ambiata.com>
@@ -15,10 +15,10 @@ executable s3
   ghc-options:         -Wall -threaded -O2
   hs-source-dirs:      gen
   build-depends:       base                            >= 3          && < 5
-                     , ambiata-mismi-core
-                     , ambiata-mismi-openssl
-                     , ambiata-mismi-s3
-                     , ambiata-mismi-s3-core
+                     , mismi-core
+                     , mismi-openssl
+                     , mismi-s3
+                     , mismi-s3-core
                      , ambiata-p
                      , ambiata-x-optparse
                      , ambiata-x-eithert

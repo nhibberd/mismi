@@ -1,4 +1,4 @@
-name:                  ambiata-mismi-openssl
+name:                  mismi-openssl
 version:               0.0.1
 license:               Apache-2.0
 author:                Ambiata <info@ambiata.com>
@@ -15,7 +15,7 @@ library
                        base                            >= 3          && < 5
                      , amazonka                        >= 1.3.6      && < 1.6
                      , amazonka-core                   >= 1.3.6      && < 1.6
-                     , ambiata-mismi-core
+                     , mismi-core
                      , ambiata-p
                      , ambiata-x-eithert
                      , ambiata-x-exception

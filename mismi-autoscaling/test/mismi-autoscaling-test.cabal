@@ -1,4 +1,4 @@
-name:                  ambiata-mismi-autoscaling-test
+name:                  mismi-autoscaling-test
 version:               0.0.1
 cabal-version:         >= 1.8
 build-type:            Simple
@@ -8,13 +8,13 @@ library
                        base
                      , ambiata-disorder-core
                      , ambiata-disorder-corpus
-                     , ambiata-mismi-core
-                     , ambiata-mismi-core-test
-                     , ambiata-mismi-autoscaling
-                     , ambiata-mismi-autoscaling-core
-                     , ambiata-mismi-autoscaling-core-test
-                     , ambiata-mismi-ec2-core
-                     , ambiata-mismi-iam-core
+                     , mismi-core
+                     , mismi-core-test
+                     , mismi-autoscaling
+                     , mismi-autoscaling-core
+                     , mismi-autoscaling-core-test
+                     , mismi-ec2-core
+                     , mismi-iam-core
                      , ambiata-p
                      , ambiata-twine
                      , ambiata-x-eithert

@@ -1,4 +1,4 @@
-name:                  ambiata-mismi-ec2
+name:                  mismi-ec2
 version:               0.0.1
 license:               Apache-2.0
 author:                Ambiata <info@ambiata.com>
@@ -14,8 +14,8 @@ library
   build-depends:
                        base                            >= 3          && < 6
                      , ambiata-p
-                     , ambiata-mismi-core
-                     , ambiata-mismi-ec2-core
+                     , mismi-core
+                     , mismi-ec2-core
                      , ambiata-x-eithert
                      , amazonka                        >= 1.4.0      && < 1.6
                      , amazonka-core                   >= 1.4.0      && < 1.6
@@ -47,9 +47,9 @@ test-suite test
   build-depends:       base
                      , ambiata-disorder-core
                      , ambiata-p
-                     , ambiata-mismi-core
-                     , ambiata-mismi-ec2
-                     , ambiata-mismi-ec2-core-test
+                     , mismi-core
+                     , mismi-ec2
+                     , mismi-ec2-core-test
                      , QuickCheck                      >= 2.7        && < 2.10
                      , quickcheck-instances            == 0.3.*
 
@@ -62,9 +62,9 @@ test-suite test-io
   build-depends:       base
                      , ambiata-disorder-core
                      , ambiata-p
-                     , ambiata-mismi-core
-                     , ambiata-mismi-core-test
-                     , ambiata-mismi-ec2
-                     , ambiata-mismi-ec2-core-test
+                     , mismi-core
+                     , mismi-core-test
+                     , mismi-ec2
+                     , mismi-ec2-core-test
                      , QuickCheck                      >= 2.7        && < 2.10
                      , quickcheck-instances            == 0.3.*
