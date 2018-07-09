@@ -13,7 +13,7 @@ description:           mismi-autoscaling.
 library
   build-depends:
                        base                            >= 3          && < 5
-                     , ambiata-p
+                     , mismi-p
                      , mismi-core
                      , mismi-autoscaling-core
                      , mismi-ec2
@@ -50,7 +50,7 @@ test-suite test
   build-depends:       base
                      , ambiata-disorder-core
                      , mismi-autoscaling
-                     , ambiata-p
+                     , mismi-p
                      , QuickCheck                      >= 2.7        && < 2.10
                      , quickcheck-instances            == 0.3.*
 
@@ -69,7 +69,7 @@ test-suite test-io
                      , mismi-autoscaling-core-test
                      , mismi-ec2-core
                      , mismi-iam-core
-                     , ambiata-p
+                     , mismi-p
                      , ambiata-twine
                      , ambiata-x-eithert
                      , retry                           == 0.7.*

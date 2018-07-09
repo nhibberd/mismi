@@ -16,17 +16,17 @@ library
                      , amazonka                        >= 1.4        && < 1.6
                      , amazonka-core                   >= 1.4        && < 1.6
                      , mismi-kernel
-                     , ambiata-p
+                     , mismi-p
                      , ambiata-x-eithert
                      , ambiata-x-exception
-                     , bifunctors                      >= 4.2        && < 5.3
+--                     , bifunctors                      >= 4.2        && < 5.3
                      , bytestring                      == 0.10.*
                      , connection                      == 0.2.8
-                     , conduit-extra                   >= 1.1.15     && < 1.2
+                     , conduit-extra                   >= 1.1.15     && < 1.3
                      , exceptions                      >= 0.6        && < 0.9
                      , ini                             == 0.3.5
                      , http-client                     >= 0.4.18     && < 0.6
-                     , http-types                      == 0.8.*
+                     , http-types                      == 0.9.*
                      , lens                            >= 4.8        && < 4.16
                      , mtl                             >= 2.1        && < 2.3
                      , profunctors                     >= 4          && < 5.3
@@ -65,7 +65,7 @@ test-suite test
                      , mismi-core
                      , mismi-kernel
                      , mismi-kernel-test
-                     , ambiata-p
+                     , mismi-p
                      , ambiata-x-eithert
                      , amazonka
                      , amazonka-core

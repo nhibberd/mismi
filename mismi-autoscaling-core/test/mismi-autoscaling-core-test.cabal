@@ -8,7 +8,7 @@ library
                        base
                      , ambiata-disorder-core
                      , ambiata-disorder-corpus
-                     , ambiata-p
+                     , mismi-p
                      , mismi-autoscaling-core
                      , mismi-ec2-core
                      , mismi-ec2-core-test

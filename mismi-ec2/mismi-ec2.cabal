@@ -13,7 +13,7 @@ description:           mismi-ec2.
 library
   build-depends:
                        base                            >= 3          && < 6
-                     , ambiata-p
+                     , mismi-p
                      , mismi-core
                      , mismi-ec2-core
                      , ambiata-x-eithert
@@ -46,7 +46,7 @@ test-suite test
   hs-source-dirs:      test
   build-depends:       base
                      , ambiata-disorder-core
-                     , ambiata-p
+                     , mismi-p
                      , mismi-core
                      , mismi-ec2
                      , mismi-ec2-core-test
@@ -61,7 +61,7 @@ test-suite test-io
   hs-source-dirs:      test
   build-depends:       base
                      , ambiata-disorder-core
-                     , ambiata-p
+                     , mismi-p
                      , mismi-core
                      , mismi-core-test
                      , mismi-ec2

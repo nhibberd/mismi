@@ -107,8 +107,9 @@ discoverAWSEnvWithRegionRetry rpol r = do
 
 
 newMismiEnv :: (Applicative m, MonadIO m, MonadCatch m) => Region -> Credentials -> m Env
-newMismiEnv r c = do
-  e <- newEnv c
+newMismiEnv r _c = do
+  e <- undefined
+--  e <- newEnv c
   pure $ e & envRegion .~ r
 
 catchAuthError :: AuthError -> IO Bool

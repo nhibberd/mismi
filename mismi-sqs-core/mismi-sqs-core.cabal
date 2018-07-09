@@ -13,7 +13,7 @@ description:           mismi-sqs-core.
 library
   build-depends:
                        base                            >= 3          && < 5
-                     , ambiata-p
+                     , mismi-p
                      , mismi-kernel
                      , text                            == 1.2.*
 
@@ -38,7 +38,7 @@ test-suite test
                      , mismi-kernel
                      , mismi-kernel-test
                      , mismi-sqs-core
-                     , ambiata-p
+                     , mismi-p
                      , text
                      , QuickCheck                      >= 2.7        && < 2.10
                      , quickcheck-instances            == 0.3.*
