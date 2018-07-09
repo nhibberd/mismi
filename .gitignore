@@ -10,4 +10,4 @@ gen
 .cabal-sandbox
 cabal.sandbox.config
 *tmp
-/.stackwork/
+.stackwork/
