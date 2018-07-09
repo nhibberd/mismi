@@ -1,4 +1,4 @@
-name:                  ambiata-mismi-s3
+name:                  mismi-s3
 version:               0.0.1
 license:               Apache-2.0
 author:                Ambiata <info@ambiata.com>
@@ -13,8 +13,8 @@ description:           mismi-s3.
 library
   build-depends:
                        base                            >= 3          && < 6
-                     , ambiata-mismi-core
-                     , ambiata-mismi-s3-core
+                     , mismi-core
+                     , mismi-s3-core
                      , ambiata-p
                      , ambiata-x-conduit
                      , ambiata-x-eithert
@@ -81,11 +81,11 @@ test-suite test
                      , amazonka-s3
                      , ambiata-disorder-core
                      , ambiata-disorder-corpus
-                     , ambiata-mismi-core
-                     , ambiata-mismi-core-test
-                     , ambiata-mismi-s3
-                     , ambiata-mismi-s3-core
-                     , ambiata-mismi-s3-core-test
+                     , mismi-core
+                     , mismi-core-test
+                     , mismi-s3
+                     , mismi-s3-core
+                     , mismi-s3-core-test
                      , ambiata-p
                      , ambiata-x-eithert
                      , conduit
@@ -119,11 +119,11 @@ test-suite test-io
                      , amazonka-s3
                      , ambiata-disorder-core
                      , ambiata-disorder-corpus
-                     , ambiata-mismi-core
-                     , ambiata-mismi-core-test
-                     , ambiata-mismi-s3
-                     , ambiata-mismi-s3-core
-                     , ambiata-mismi-s3-core-test
+                     , mismi-core
+                     , mismi-core-test
+                     , mismi-s3
+                     , mismi-s3-core
+                     , mismi-s3-core-test
                      , ambiata-p
                      , ambiata-x-eithert
                      , bytestring
@@ -158,11 +158,11 @@ test-suite test-reliability
                      , amazonka-s3
                      , ambiata-disorder-core
                      , ambiata-disorder-corpus
-                     , ambiata-mismi-core
-                     , ambiata-mismi-core-test
-                     , ambiata-mismi-s3
-                     , ambiata-mismi-s3-core
-                     , ambiata-mismi-s3-core-test
+                     , mismi-core
+                     , mismi-core-test
+                     , mismi-s3
+                     , mismi-s3-core
+                     , mismi-s3-core-test
                      , ambiata-p
                      , ambiata-x-eithert
                      , bytestring
@@ -191,11 +191,11 @@ benchmark bench
   hs-source-dirs:      test
   build-depends:       base
                      , ambiata-disorder-corpus
-                     , ambiata-mismi-core
-                     , ambiata-mismi-core-test
-                     , ambiata-mismi-s3
-                     , ambiata-mismi-s3-core
-                     , ambiata-mismi-s3-core-test
+                     , mismi-core
+                     , mismi-core-test
+                     , mismi-s3
+                     , mismi-s3-core
+                     , mismi-s3-core-test
                      , ambiata-p
                      , ambiata-x-eithert
                      , criterion                       == 1.1.*

@@ -1,4 +1,4 @@
-name:                  ambiata-mismi-kernel
+name:                  mismi-kernel
 version:               0.0.1
 license:               Apache-2.0
 author:                Ambiata <info@ambiata.com>
@@ -34,7 +34,7 @@ test-suite test
   build-depends:       base
                      , ambiata-disorder-core
                      , ambiata-disorder-corpus
-                     , ambiata-mismi-kernel
+                     , mismi-kernel
                      , ambiata-p
                      , text
                      , QuickCheck                      >= 2.7        && < 2.10

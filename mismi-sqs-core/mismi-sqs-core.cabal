@@ -1,4 +1,4 @@
-name:                  ambiata-mismi-sqs-core
+name:                  mismi-sqs-core
 version:               0.0.1
 license:               Apache-2.0
 author:                Ambiata <info@ambiata.com>
@@ -14,7 +14,7 @@ library
   build-depends:
                        base                            >= 3          && < 5
                      , ambiata-p
-                     , ambiata-mismi-kernel
+                     , mismi-kernel
                      , text                            == 1.2.*
 
   ghc-options:
@@ -35,9 +35,9 @@ test-suite test
   build-depends:       base
                      , ambiata-disorder-core
                      , ambiata-disorder-corpus
-                     , ambiata-mismi-kernel
-                     , ambiata-mismi-kernel-test
-                     , ambiata-mismi-sqs-core
+                     , mismi-kernel
+                     , mismi-kernel-test
+                     , mismi-sqs-core
                      , ambiata-p
                      , text
                      , QuickCheck                      >= 2.7        && < 2.10
