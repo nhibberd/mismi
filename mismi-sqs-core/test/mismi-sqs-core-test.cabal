@@ -11,7 +11,7 @@ library
                      , mismi-kernel
                      , mismi-kernel-test
                      , mismi-sqs-core
-                     , ambiata-p
+                     , mismi-p
                      , text
                      , QuickCheck                      >= 2.7        && < 2.10
                      , quickcheck-instances            == 0.3.*

@@ -13,7 +13,7 @@ description:           mismi-ec2-core.
 library
   build-depends:
                        base                            >= 3          && < 5
-                     , ambiata-p
+                     , mismi-p
                      , base64-bytestring               == 1.0.*
                      , text                            == 1.2.*
 
@@ -37,7 +37,7 @@ test-suite test
                      , ambiata-disorder-core
                      , ambiata-disorder-corpus
                      , mismi-ec2-core
-                     , ambiata-p
+                     , mismi-p
                      , text
                      , QuickCheck                      >= 2.7        && < 2.10
                      , quickcheck-instances            == 0.3.*

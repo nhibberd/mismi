@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DoAndIfThenElse #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NoImplicitPrelude  #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Mismi.Control (
@@ -20,6 +20,7 @@ module Mismi.Control (
   , newEnvFromCreds
   , awsBracket
   , awsBracket_
+  , unsafeRunAWS
   , renderError
   , onStatus
   , onStatus_
@@ -37,19 +38,19 @@ module Mismi.Control (
   ) where
 
 import           Control.Exception (IOException)
-import           Control.Lens ((.~), (^.), (^?), over)
-import           Control.Monad.Catch
-import           Control.Monad.IO.Class
-import           Control.Monad.Reader
+import           Control.Lens (over, (.~), (^.), (^?))
+import           Control.Monad.Catch (Handler (..), MonadCatch, MonadMask, SomeException, bracket, catch, fromException, throwM, try)
+import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Monad.Reader (ask, local)
+import           Control.Monad.Trans.Except (ExceptT (..), mapExceptT, runExceptT)
 import           Control.Retry (RetryPolicyM, RetryStatus)
-import           Control.Retry (fullJitterBackoff, recovering, rsIterNumber, applyPolicy)
+import           Control.Retry (applyPolicy, fullJitterBackoff, recovering, rsIterNumber)
 
+import           Data.ByteString.Builder (toLazyByteString)
 import qualified Data.ByteString.Lazy as BL
-import           Data.ByteString.Builder
-import           Data.Text as T
-import           Data.Text.Encoding as T
+import           Data.Text.Encoding (decodeUtf8)
 
-import           Mismi.Environment
+import           Mismi.Environment (discoverAWSEnvWithRegion)
 
 import           Network.AWS hiding (runAWS)
 import qualified Network.AWS as A
@@ -58,30 +59,38 @@ import           Network.AWS.Error
 
 import           Network.HTTP.Client (HttpException (..))
 #if MIN_VERSION_http_client(0,5,0)
-import           Network.HTTP.Client (HttpExceptionContent (..), responseTimeoutMicro, responseStatus)
+import           Network.HTTP.Client (HttpExceptionContent (..), responseStatus, responseTimeoutMicro)
 #endif
 import           Network.HTTP.Client.Internal (mResponseTimeout)
-import           Network.HTTP.Types.Status
+import           Network.HTTP.Types.Status (Status (..))
+import qualified Network.HTTP.Types as HTTP
 
 import           P
 
-import           System.IO
-
-import           X.Control.Monad.Trans.Either
-
-runAWST :: Env -> (Error -> e) -> EitherT e AWS a -> EitherT e IO a
+runAWST :: Env -> (Error -> e) -> ExceptT e AWS a -> ExceptT e IO a
 runAWST e err action =
   runAWSTWith (runAWS e) err action
 
-runAWSTWithRegion :: Region -> (Error -> e) -> EitherT e AWS a -> EitherT e IO a
+runAWSTWithRegion :: Region -> (Error -> e) -> ExceptT e AWS a -> ExceptT e IO a
 runAWSTWithRegion r err action =
   runAWSTWith (runAWSWithRegion r) err action
 
-runAWSTWith :: (forall b. AWS b -> EitherT Error IO b) -> (Error -> e) -> EitherT e AWS a -> EitherT e IO a
+runAWSTWith :: (forall b. AWS b -> ExceptT Error IO b) -> (Error -> e) -> ExceptT e AWS a -> ExceptT e IO a
 runAWSTWith run err action =
-  joinErrors id err $ mapEitherT run action
+  joinErrors id err $ mapExceptT run action
 
-runAWS :: (MonadIO m, MonadCatch m) => Env -> AWS a -> EitherT Error m a
+joinErrors :: (Functor m, Monad m) => (x -> z) -> (y -> z) -> ExceptT x (ExceptT y m) a -> ExceptT z m a
+joinErrors f g =
+  let
+    first' h =
+      either (Left . h) Right
+
+    second' =
+      fmap
+  in
+    mapExceptT (fmap (join . second' (first' f) . first' g)) . runExceptT
+
+runAWS :: (MonadIO m, MonadCatch m) => Env -> AWS a -> ExceptT Error m a
 runAWS e'' =
   let
     e' = over envManager (\m -> m { mResponseTimeout =
@@ -93,9 +102,9 @@ runAWS e'' =
       }) e''
     e = configureRetries 5 e'
   in
-    EitherT . try . liftIO . rawRunAWS e
+    ExceptT . try . liftIO . rawRunAWS e
 
-runAWSWithRegion :: (MonadIO m, MonadCatch m) => Region -> AWS a -> EitherT Error m a
+runAWSWithRegion :: (MonadIO m, MonadCatch m) => Region -> AWS a -> ExceptT Error m a
 runAWSWithRegion r a = do
   e <- liftIO $ discoverAWSEnvWithRegion r
   runAWS e a
@@ -132,7 +141,7 @@ awsBracket_ r f a =
 
 unsafeRunAWS :: Env -> AWS a -> IO a
 unsafeRunAWS e a =
-  eitherT throwM pure $ runAWS e a
+  either throwM pure =<< runExceptT (runAWS e a)
 
 renderError :: Error -> Text
 renderError =
@@ -232,7 +241,7 @@ checkException v f =
           True
         StatusCodeException resp _ ->
           let status = responseStatus resp in
-          status == status500 || status == status503
+          status == HTTP.status500 || status == HTTP.status503
         ResponseTimeout ->
           True
         ConnectionTimeout ->
@@ -275,7 +284,7 @@ checkException v f =
     NoResponseDataReceived ->
       True
     StatusCodeException status _ _ ->
-      status == status500 || status == status503
+      status == HTTP.status500 || status == HTTP.status503
     FailedConnectionException _ _ ->
       True
     FailedConnectionException2 _ _ _ _ ->
@@ -296,15 +305,15 @@ checkException v f =
 
 handle404 :: AWS a -> AWS (Maybe a)
 handle404 =
-  handleStatus status404
+  handleStatus HTTP.status404
 
 handle403 :: AWS a -> AWS (Maybe a)
 handle403 =
-  handleStatus status403
+  handleStatus HTTP.status403
 
 handle301 :: AWS a -> AWS (Maybe a)
 handle301 =
-  handleStatus status301
+  handleStatus HTTP.status301
 
 handleStatus :: Status -> AWS a -> AWS (Maybe a)
 handleStatus s m =

@@ -19,7 +19,7 @@ executable s3
                      , mismi-openssl
                      , mismi-s3
                      , mismi-s3-core
-                     , ambiata-p
+                     , mismi-p
                      , ambiata-x-optparse
                      , ambiata-x-eithert
                      , bytestring                      == 0.10.*

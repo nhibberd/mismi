@@ -1,22 +1,22 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 module Test.Mismi.Data where
 
-import           Disorder.Core
+import           Hedgehog
 
 import           Mismi.Data
 
 import           P
 
-import           Test.Mismi.Arbitrary ()
+import qualified Test.Mismi.Gen as Gen
 
-import           Test.QuickCheck
-import           Test.QuickCheck.Instances ()
-
+prop_tripping_region :: Property
 prop_tripping_region =
-  tripping fromMismiRegion (Just . toMismiRegion)
+  property $ do
+    region <- forAll Gen.genRegion
+    region === fromMismiRegion (toMismiRegion region)
 
-return []
-tests = $quickCheckAll
+tests :: IO Bool
+tests =
+  checkSequential $$(discover)

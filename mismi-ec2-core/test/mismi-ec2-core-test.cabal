@@ -8,7 +8,7 @@ library
                        base
                      , ambiata-disorder-core
                      , ambiata-disorder-corpus
-                     , ambiata-p
+                     , mismi-p
                      , mismi-ec2-core
                      , text
                      , QuickCheck                      >= 2.7        && < 2.10

@@ -13,7 +13,7 @@ description:           mismi-kernel.
 library
   build-depends:
                        base                            >= 3          && < 5
-                     , ambiata-p
+                     , mismi-p
                      , text                            == 1.2.*
 
   ghc-options:
@@ -31,11 +31,13 @@ test-suite test
   main-is:             test.hs
   ghc-options:         -Wall -threaded -O2
   hs-source-dirs:      test
+
+  other-modules:
+                       Test.Mismi.Kernel.Data
+                       Test.Mismi.Kernel.Gen
+
   build-depends:       base
-                     , ambiata-disorder-core
-                     , ambiata-disorder-corpus
                      , mismi-kernel
-                     , ambiata-p
+                     , mismi-p
+                     , hedgehog
                      , text
-                     , QuickCheck                      >= 2.7        && < 2.10
-                     , quickcheck-instances            == 0.3.*

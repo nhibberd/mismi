@@ -15,7 +15,7 @@ library
                        base                            >= 3          && < 6
                      , mismi-core
                      , mismi-s3-core
-                     , ambiata-p
+                     , mismi-p
                      , ambiata-x-conduit
                      , ambiata-x-eithert
                      , ambiata-x-exception
@@ -86,7 +86,7 @@ test-suite test
                      , mismi-s3
                      , mismi-s3-core
                      , mismi-s3-core-test
-                     , ambiata-p
+                     , mismi-p
                      , ambiata-x-eithert
                      , conduit
                      , containers                      == 0.5.*
@@ -124,7 +124,7 @@ test-suite test-io
                      , mismi-s3
                      , mismi-s3-core
                      , mismi-s3-core-test
-                     , ambiata-p
+                     , mismi-p
                      , ambiata-x-eithert
                      , bytestring
                      , conduit
@@ -163,7 +163,7 @@ test-suite test-reliability
                      , mismi-s3
                      , mismi-s3-core
                      , mismi-s3-core-test
-                     , ambiata-p
+                     , mismi-p
                      , ambiata-x-eithert
                      , bytestring
                      , conduit
@@ -196,7 +196,7 @@ benchmark bench
                      , mismi-s3
                      , mismi-s3-core
                      , mismi-s3-core-test
-                     , ambiata-p
+                     , mismi-p
                      , ambiata-x-eithert
                      , criterion                       == 1.1.*
                      , conduit-extra                   >= 1.1.13     && < 1.2
