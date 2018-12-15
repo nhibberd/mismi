@@ -19,10 +19,10 @@ before_install:
   - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
 
 install:
-  - ./script/travis-install
+  - ./scripts/travis-install
 
 script:
-  - ./script/travis-build
+  - ./scripts/travis-build
 
 matrix:
   include:
