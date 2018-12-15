@@ -9,6 +9,10 @@ category:              AWS
 cabal-version:         >= 1.8
 build-type:            Simple
 description:           mismi.
+tested-with:
+    GHC == 8.0.1
+  , GHC == 8.2.1
+  , GHC == 8.4.3
 
 library
   build-depends:
