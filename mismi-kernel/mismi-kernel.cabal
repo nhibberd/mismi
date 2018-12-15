@@ -32,10 +32,7 @@ test-suite test
   ghc-options:         -Wall -threaded -O2
   hs-source-dirs:      test
   build-depends:       base
-                     , ambiata-disorder-core
-                     , ambiata-disorder-corpus
                      , mismi-kernel
                      , mismi-p
+                     , hedgehog
                      , text
-                     , QuickCheck                      >= 2.7        && < 2.10
-                     , quickcheck-instances            == 0.3.*

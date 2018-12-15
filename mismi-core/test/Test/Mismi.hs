@@ -2,15 +2,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Test.Mismi (
     testAWS
+  , liftAWS
   , enableTests
   , runAWSDefaultRegion
   ) where
 
-import           Control.Monad.Catch (throwM)
+import           Control.Monad.Morph (hoist)
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Except (runExceptT)
 
-import           Disorder.Core.IO (testIO)
+import           Hedgehog
 
 import           Mismi
+import           Mismi.Control (unsafeRunAWS)
 
 import           P
 import           Prelude (String)
@@ -18,22 +22,21 @@ import           Prelude (String)
 import           System.Environment (lookupEnv)
 import           System.IO (IO)
 
-import           Test.Mismi.Arbitrary ()
-import           Test.QuickCheck (Property, Testable)
+testAWS :: AWS () -> Property
+testAWS action =
+  property $
+    liftAWS (lift action)
 
-import           X.Control.Monad.Trans.Either (eitherT)
-
-
-testAWS :: Testable a => AWS a -> Property
-testAWS =
-  testIO . runAWSDefaultRegion
+liftAWS :: PropertyT AWS a -> PropertyT IO a
+liftAWS =
+  hoist runAWSDefaultRegion
 
 -- Default to Sydney for tests only, production should fail without the environment variable
 runAWSDefaultRegion :: AWS a -> IO a
 runAWSDefaultRegion a = do
-  r <- eitherT (const $ pure Sydney) pure getRegionFromEnv
+  r <- either (const $ pure Sydney) pure =<< runExceptT getRegionFromEnv
   e <- discoverAWSEnvWithRegion r
-  eitherT throwM pure $ runAWS e a
+  unsafeRunAWS e a
 
 -- Environment variable to lookup, tests to run when it is set to
 -- false and tests to run when when it is set to true (or missing).

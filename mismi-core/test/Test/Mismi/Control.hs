@@ -1,62 +1,78 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-module Test.Mismi.Control where
+module Test.Mismi.Control (tests) where
 
-import           Control.Monad.Catch hiding (finally)
-import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Resource
+import           Control.Monad.Catch (throwM, catchIOError)
+import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.Trans.Resource (register)
 
-import           Data.IORef
-import           Data.Text
+import           Data.IORef (modifyIORef, newIORef, readIORef)
 
-import           Disorder.Core.IO
+import           Hedgehog
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
-import           Mismi.Control
+import           Mismi.Control (awsBracket)
 
 import           P
 
-
-import           System.IO
 import           System.IO.Error (userError)
 
-import           Test.Mismi
-import           Test.Mismi.Arbitrary ()
-import           Test.QuickCheck
-import           Test.QuickCheck.Instances ()
+import           Test.Mismi (testAWS, liftAWS, runAWSDefaultRegion)
 
+prop_bracket :: Property
+prop_bracket =
+  property $ do
+    l <- forAll $ Gen.list (Range.linear 0 100) (Gen.text (Range.linear 0 50) Gen.alphaNum)
+    final <- forAll $ Gen.text (Range.linear 1 10) Gen.alphaNum
+    action <- forAll $ Gen.text (Range.linear 1 10) Gen.alphaNum
 
-prop_bracket :: [Text] -> Text -> Text -> Property
-prop_bracket l final action = final /= "" && action /= "" ==> testIO $ do
-  r <- newIORef l
-  let after' = (flip modifyIORef (final :))
-  let action' = (flip modifyIORef (action :))
-  runAWSDefaultRegion $ awsBracket (liftIO $ return r) (liftIO . after') (liftIO . action')
-  (=== final : action : l) <$> readIORef r
+    ref <- liftIO $ newIORef l
+    let
+      after' = (flip modifyIORef (final :))
+      action' = (flip modifyIORef (action :))
+    liftIO . runAWSDefaultRegion $ awsBracket (liftIO $ return ref) (liftIO . after') (liftIO . action')
+    result <- liftIO $ readIORef ref
+    result === final : action : l
 
-prop_bracket_catch :: [Text] -> Text -> Property
-prop_bracket_catch l final = final /= "" ==> testIO $ do
-  r <- newIORef l
-  let after' = (flip modifyIORef (final :))
-  let action' = const $ throwM (userError "")
-  runAWSDefaultRegion $ awsBracket (liftIO $ return r) (liftIO . after') (liftIO . action') `catchIOError` (const $ return ())
-  (=== final : l) <$> readIORef r
+prop_bracket_catch :: Property
+prop_bracket_catch =
+  property $ do
+    l <- forAll $ Gen.list (Range.linear 0 100) (Gen.text (Range.linear 0 50) Gen.alphaNum)
+    final <- forAll $ Gen.text (Range.linear 1 10) Gen.alphaNum
+
+    ref <- liftIO $ newIORef l
+    let
+      after' = (flip modifyIORef (final :))
+      action' = const $ throwM (userError "")
+    liftIO . runAWSDefaultRegion $
+      awsBracket (liftIO $ return ref) (liftIO . after') (liftIO . action') `catchIOError` (const $ return ())
+    result <- liftIO $ readIORef ref
+    result === final : l
+
 
 prop_testAWS :: Property
 prop_testAWS =
-  expectFailure . Test.QuickCheck.once . testAWS $ pure False
+  withTests 1 . testAWS $
+    pure ()
+
+prop_testAWS_PropertyT :: Property
+prop_testAWS_PropertyT =
+  withTests 1 . property . liftAWS $ do
+    False === False
+    True === True
 
 
-prop_finalizer = testIO $ do
-  r <- newIORef (0 :: Int)
-  runAWSDefaultRegion $ do
-    void $ register (modifyIORef r (const $ 1))
-  (=== 1) <$> readIORef r
+prop_finalizer :: Property
+prop_finalizer =
+  property $ do
+    ref <- liftIO $ newIORef (0 :: Int)
+    liftIO . runAWSDefaultRegion $ do
+      void $ register (modifyIORef ref (const $ 1))
+    result <- liftIO $ readIORef ref
+    result === 1
 
-
-
-
-return []
 tests :: IO Bool
-tests = $quickCheckAll
+tests =
+  checkSequential $$(discover)

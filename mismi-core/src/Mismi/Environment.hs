@@ -1,6 +1,6 @@
-{-# LANGUAGE NoImplicitPrelude  #-}
-{-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Mismi.Environment (
     Env
   , Region (..)
@@ -19,26 +19,25 @@ module Mismi.Environment (
   ) where
 
 import           Control.Lens ((.~))
-import           Control.Monad.Catch (MonadCatch(..), MonadThrow(..), Handler(..))
-import           Control.Monad.IO.Class (MonadIO(..))
-import           Control.Monad.Trans.AWS (Credentials(..), Region(..))
-import           Control.Monad.Trans.AWS (Env, newEnv, envLogger, envRegion)
-import           Control.Monad.Trans.AWS (Logger, LogLevel(..), newLogger)
+import           Control.Monad.Catch (Handler (..), MonadCatch (..), MonadThrow (..))
+import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.AWS (Credentials (..), Region (..))
+import           Control.Monad.Trans.AWS (Env, envLogger, envRegion, newEnv)
+import           Control.Monad.Trans.AWS (LogLevel (..), Logger, newLogger)
 import           Control.Monad.Trans.Class (lift)
-import           Control.Retry (RetryPolicyM, recovering, constantDelay, limitRetries)
+import           Control.Monad.Trans.Except (ExceptT, throwE)
+import           Control.Retry (RetryPolicyM, constantDelay, limitRetries, recovering)
 
 import qualified Data.Text as T
 import           Data.Typeable (Typeable)
 
-import           Network.AWS.Auth (AuthError(..))
+import           Network.AWS.Auth (AuthError (..))
 import           Network.AWS.Data (fromText)
 
 import           P
 
 import           System.Environment (lookupEnv)
 import           System.IO (IO, stderr)
-
-import           X.Control.Monad.Trans.Either (EitherT, left, right)
 
 data RegionError =
     MissingRegion
@@ -50,18 +49,18 @@ data Debugging =
   | DebugDisabled
 
 
-getRegionFromEnv :: (MonadIO m, MonadThrow m) => EitherT RegionError m Region
+getRegionFromEnv :: (MonadIO m, MonadThrow m) => ExceptT RegionError m Region
 getRegionFromEnv = do
   mr <- liftIO $ lookupEnv "AWS_DEFAULT_REGION"
   case mr of
     Nothing ->
-      left MissingRegion
+      throwE MissingRegion
     Just a ->
       case fromText $ T.pack a of
         Left e ->
-          left $ UnknownRegion (T.pack e)
+          throwE $ UnknownRegion (T.pack e)
         Right r ->
-          right r
+          pure r
 
 getDebugging :: MonadIO m => m Debugging
 getDebugging = do
@@ -86,7 +85,7 @@ setDebugging d e =
     DebugDisabled ->
       e
 
-discoverAWSEnv :: EitherT RegionError IO Env
+discoverAWSEnv :: ExceptT RegionError IO Env
 discoverAWSEnv =
   discoverAWSEnvRetry $ limitRetries 1 <> constantDelay 200000
 
@@ -94,7 +93,7 @@ discoverAWSEnvWithRegion :: Region -> IO Env
 discoverAWSEnvWithRegion r =
   flip discoverAWSEnvWithRegionRetry r $ limitRetries 1 <> constantDelay 200000
 
-discoverAWSEnvRetry :: RetryPolicyM IO -> EitherT RegionError IO Env
+discoverAWSEnvRetry :: RetryPolicyM IO -> ExceptT RegionError IO Env
 discoverAWSEnvRetry retry = do
   r <- getRegionFromEnv
   lift $ discoverAWSEnvWithRegionRetry retry r
@@ -107,9 +106,8 @@ discoverAWSEnvWithRegionRetry rpol r = do
 
 
 newMismiEnv :: (Applicative m, MonadIO m, MonadCatch m) => Region -> Credentials -> m Env
-newMismiEnv r _c = do
-  e <- undefined
---  e <- newEnv c
+newMismiEnv r c = do
+  e <- newEnv c
   pure $ e & envRegion .~ r
 
 catchAuthError :: AuthError -> IO Bool

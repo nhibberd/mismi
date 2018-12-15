@@ -17,8 +17,6 @@ library
                      , amazonka-core                   >= 1.4        && < 1.6
                      , mismi-kernel
                      , mismi-p
-                     , ambiata-x-eithert
-                     , ambiata-x-exception
 --                     , bifunctors                      >= 4.2        && < 5.3
                      , bytestring                      == 0.10.*
                      , connection                      == 0.2.8
@@ -54,21 +52,28 @@ library
                        Mismi.Data
                        Mismi.Environment
 
+
 test-suite test
   type:                exitcode-stdio-1.0
   main-is:             test.hs
   ghc-options:         -Wall -threaded -O2
   hs-source-dirs:      test
+
+  other-modules:
+                       Test.Mismi
+                       Test.Mismi.Control
+                       Test.Mismi.Data
+                       Test.Mismi.Gen
+
   build-depends:       base
-                     , ambiata-disorder-core
-                     , ambiata-disorder-corpus
                      , mismi-core
                      , mismi-kernel
                      , mismi-kernel-test
                      , mismi-p
-                     , ambiata-x-eithert
+                     , mmorph
                      , amazonka
                      , amazonka-core
+                     , hedgehog
                      , exceptions
                      , filepath
                      , directory                       >= 1.2        && < 1.4
@@ -77,7 +82,5 @@ test-suite test
                      , temporary                       == 1.2.*
                      , text
                      , transformers
-                     , QuickCheck                      >= 2.7        && < 2.10
-                     , quickcheck-instances            == 0.3.*
                      , unix                            == 2.7.*
                      , uuid                            == 1.3.*

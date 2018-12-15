@@ -8,9 +8,8 @@ library
                        base                            >= 3          && < 6
                      , mismi-kernel
                      , mismi-p
+                     , hedgehog
                      , text                            == 1.2.*
-                     , QuickCheck                      >= 2.7        && < 2.10
-                     , quickcheck-instances            == 0.3.*
 
   exposed-modules:
-                       Test.Mismi.Kernel.Arbitrary
+                       Test.Mismi.Kernel.Gen
