@@ -24,7 +24,7 @@ cabal-version:
   >= 1.8
 build-type:
   Simple
-tested-wtih:
+tested-with:
     GHC == 8.0.1
   , GHC == 8.2.2
 extra-source-files:
