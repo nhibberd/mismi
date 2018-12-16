@@ -26,6 +26,6 @@ script:
 
 matrix:
   include:
-    - env: CABALVER=1.24 GHCVER=8.0.1 STACK_YAML=stack.yaml CACHE_NAME=mismi-8.2.2
+    - env: AWS_TEST=false CABALVER=1.24 GHCVER=8.0.1 STACK_YAML=stack.yaml CACHE_NAME=mismi-8.2.2
       compiler: ": #stack 8.2.2"
       addons: {apt: {packages: [ghc-8.2.2], sources: [hvr-ghc]}}
