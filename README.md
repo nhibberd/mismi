@@ -1,6 +1,8 @@
 mismi
 =====
 
+[![Build Status](https://travis-ci.org/nhibberd/mismi.svg?branch=master)](https://travis-ci.org/nhibberd/mismi)
+
 > Source of the Amazon
 > - http://en.wikipedia.org/wiki/Amazon_River
 
