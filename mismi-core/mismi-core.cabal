@@ -1,92 +1,123 @@
-name:                  mismi-core
-version:               0.0.1
-license:               Apache-2.0
-author:                Ambiata <info@ambiata.com>
-maintainer:            Ambiata <info@ambiata.com>
-copyright:             (c) 2015 Ambiata
-synopsis:              AWS library
-category:              AWS
-cabal-version:         >= 1.8
-build-type:            Simple
-description:           mismi.
+version: 0.0.1
+
+name:
+  mismi-core
+author:
+  Nick Hibberd
+maintainer:
+  Nick Hibberd <nhibberd@gmail.com>
+homepage:
+  https://github.com/nhibberd/mismi
+bug-reports:
+  https://github.com/nhibberd/mismi/issues
+synopsis:
+  AWS Library
+description:
+  mismi-core
+category:
+  AWS
+license:
+  BSD3
+license-file:
+  LICENSE
+cabal-version:
+  >= 1.8
+build-type:
+  Simple
 tested-with:
     GHC == 8.0.1
-  , GHC == 8.2.1
-  , GHC == 8.4.3
+  , GHC == 8.2.2
 
 library
   build-depends:
-                       base                            >= 3          && < 6
-                     , amazonka                        >= 1.4        && < 1.6
-                     , amazonka-core                   >= 1.4        && < 1.6
-                     , mismi-kernel
-                     , mismi-p
-                     , bytestring                      == 0.10.*
-                     , exceptions                      >= 0.6        && < 0.9
-                     , http-client                     >= 0.4.18     && < 0.6
-                     , http-types                      == 0.9.*
-                     , lens                            >= 4.8        && < 4.16
-                     , mtl                             >= 2.1        && < 2.3
-                     , resourcet                       == 1.1.*
-                     , retry                           == 0.7.*
-                     , text                            == 1.2.*
-                     , transformers                    >= 0.3.1      && < 0.6
+      base                            >= 3          && < 5
+    , mismi-kernel
+    , mismi-p
+    , text                            >= 1.1        && < 1.3
+    , amazonka                        >= 1.4        && < 1.6
+    , amazonka-core                   >= 1.4        && < 1.6
+    , bytestring                      == 0.10.*
+    , exceptions                      >= 0.6        && < 0.9
+    , http-client                     >= 0.4.18     && < 0.6
+    , http-types                      == 0.9.*
+    , lens                            >= 4.8        && < 4.16
+    , mtl                             >= 2.1        && < 2.3
+    , resourcet                       == 1.1.*
+    , retry                           == 0.7.*
+    , text                            == 1.2.*
+    , transformers                    >= 0.3.1      && < 0.6
 
   ghc-options:
-                       -Wall
-  if impl(ghc >= 8.0)
-    ghc-options:        -fno-warn-redundant-constraints
+    -Wall
 
   hs-source-dirs:
-                       src
+    src
 
 
   exposed-modules:
-                       Mismi
-                       Mismi.Amazonka
-                       Mismi.Control
-                       Mismi.Data
-                       Mismi.Environment
+    Mismi
+    Mismi.Amazonka
+    Mismi.Control
+    Mismi.Data
+    Mismi.Environment
 
 
 test-suite test
-  type:                exitcode-stdio-1.0
-  main-is:             test.hs
-  ghc-options:         -Wall -threaded -O2
-  hs-source-dirs:      test
+  type:
+    exitcode-stdio-1.0
+
+  main-is:
+    test.hs
+
+  ghc-options:
+    -Wall -threaded -O2
+
+  hs-source-dirs:
+    test
 
   other-modules:
-                       Test.Mismi
-                       Test.Mismi.Data
-                       Test.Mismi.Gen
+    Test.Mismi
+    Test.Mismi.Data
+    Test.Mismi.Gen
 
 
-  build-depends:       base
-                     , mismi-core
-                     , mismi-p
-                     , mmorph
-                     , amazonka-core
-                     , hedgehog
-                     , transformers
+  build-depends:
+      base
+    , mismi-core
+    , mismi-p
+    , mmorph
+    , amazonka-core
+    , hedgehog
+    , transformers
 
 
 test-suite test-io
-  type:                exitcode-stdio-1.0
-  main-is:             test-io.hs
-  ghc-options:         -Wall -threaded -O2
-  hs-source-dirs:      test
+  type:
+    exitcode-stdio-1.0
+
+  main-is:
+    test-io.hs
+
+  ghc-options:
+    -Wall -threaded -O2
+
+  hs-source-dirs:
+    test
 
   other-modules:
-                       Test.Mismi
-                       Test.IO.Mismi.Control
+    Test.Mismi
+    Test.Mismi.Data
+    Test.Mismi.Gen
+    Test.IO.Mismi.Control
 
-  build-depends:       base
-                     , mismi-core
-                     , mismi-core-test
-                     , mismi-p
-                     , mmorph
-                     , amazonka-core
-                     , hedgehog
-                     , exceptions
-                     , resourcet                       == 1.1.*
-                     , transformers
+  build-depends:
+      base
+    , mismi-core
+    , mismi-core-test
+    , mismi-p
+    , mmorph
+    , amazonka-core
+    , hedgehog
+    , exceptions
+    , resourcet                       == 1.1.*
+    , transformers
