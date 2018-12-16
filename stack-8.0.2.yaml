@@ -1,8 +1,0 @@
-resolver: lts-9.21
-
-packages:
-  - mismi-p
-  - mismi-core
-  - mismi-core/test
-  - mismi-kernel
-  - mismi-kernel/test
