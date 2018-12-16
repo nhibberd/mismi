@@ -7,7 +7,9 @@ module Test.Mismi.Gen (
   , genSessionToken
   ) where
 
-import           Network.AWS.Types
+import           Network.AWS.Types (SessionToken (..), SecretKey (..), AccessKey (..))
+
+import           Mismi.Control (Region (..))
 
 import           Hedgehog
 import qualified Hedgehog.Gen as Gen

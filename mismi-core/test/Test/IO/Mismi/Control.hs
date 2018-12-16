@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Test.Mismi.Control (tests) where
+module Test.IO.Mismi.Control (tests) where
 
 import           Control.Monad.Catch (throwM, catchIOError)
 import           Control.Monad.IO.Class (liftIO)
