@@ -17,8 +17,6 @@ before_cache:
 before_install:
   - unset CC
   - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
-
-install:
   - ./scripts/travis-install
 
 script:
