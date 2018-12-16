@@ -1,3 +1,0 @@
-[submodule "lib/amazonka"]
-	path = lib/amazonka
-	url = https://github.com/ambiata/amazonka
