@@ -9,6 +9,10 @@ category:              AWS
 cabal-version:         >= 1.8
 build-type:            Simple
 description:           mismi.
+tested-with:
+    GHC == 8.0.1
+  , GHC == 8.2.1
+  , GHC == 8.4.3
 
 library
   build-depends:
@@ -17,24 +21,16 @@ library
                      , amazonka-core                   >= 1.4        && < 1.6
                      , mismi-kernel
                      , mismi-p
---                     , bifunctors                      >= 4.2        && < 5.3
                      , bytestring                      == 0.10.*
-                     , connection                      == 0.2.8
-                     , conduit-extra                   >= 1.1.15     && < 1.3
                      , exceptions                      >= 0.6        && < 0.9
-                     , ini                             == 0.3.5
                      , http-client                     >= 0.4.18     && < 0.6
                      , http-types                      == 0.9.*
                      , lens                            >= 4.8        && < 4.16
                      , mtl                             >= 2.1        && < 2.3
-                     , profunctors                     >= 4          && < 5.3
                      , resourcet                       == 1.1.*
                      , retry                           == 0.7.*
-                     , template-haskell
                      , text                            == 1.2.*
-                     , time                            >= 1.4        && < 1.9
                      , transformers                    >= 0.3.1      && < 0.6
-                     , semigroups                      >= 0.16       && < 0.19
 
   ghc-options:
                        -Wall
@@ -61,27 +57,36 @@ test-suite test
 
   other-modules:
                        Test.Mismi
-                       Test.Mismi.Control
                        Test.Mismi.Data
                        Test.Mismi.Gen
 
 
   build-depends:       base
                      , mismi-core
-                     , mismi-kernel
-                     , mismi-kernel-test
                      , mismi-p
                      , mmorph
-                     , amazonka
+                     , amazonka-core
+                     , hedgehog
+                     , transformers
+
+
+test-suite test-io
+  type:                exitcode-stdio-1.0
+  main-is:             test-io.hs
+  ghc-options:         -Wall -threaded -O2
+  hs-source-dirs:      test
+
+  other-modules:
+                       Test.Mismi
+                       Test.IO.Mismi.Control
+
+  build-depends:       base
+                     , mismi-core
+                     , mismi-core-test
+                     , mismi-p
+                     , mmorph
                      , amazonka-core
                      , hedgehog
                      , exceptions
-                     , filepath
-                     , directory                       >= 1.2        && < 1.4
-                     , http-client
                      , resourcet                       == 1.1.*
-                     , temporary                       == 1.2.*
-                     , text
                      , transformers
-                     , unix                            == 2.7.*
-                     , uuid                            == 1.3.*

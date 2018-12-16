@@ -1,0 +1,29 @@
+language: generic
+sudo: false
+
+cache:
+  directories:
+    - $HOME/.ghc
+    - $HOME/.cabsnap
+    - $HOME/.cabal/packages
+    - $HOME/.stack
+    - .stack-work
+
+
+before_cache:
+  - rm -fv $HOME/.cabal/packages/hackage.haskell.org/build-reports.log
+  - rm -fv $HOME/.cabal/packages/hackage.haskell.org/00-index.tar
+
+before_install:
+  - unset CC
+  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
+  - ./scripts/travis-install
+
+script:
+  - ./scripts/travis-build
+
+matrix:
+  include:
+    - env: AWS_TEST=false CABALVER=1.24 GHCVER=8.0.1 STACK_YAML=stack.yaml CACHE_NAME=mismi-8.2.2
+      compiler: ": #stack 8.2.2"
+      addons: {apt: {packages: [ghc-8.2.2], sources: [hvr-ghc]}}

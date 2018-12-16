@@ -1,15 +1,3 @@
-[submodule "lib/p"]
-	path = lib/p
-	url = git@github.com:ambiata/p.git
-[submodule "lib/disorder"]
-	path = lib/disorder
-	url = git@github.com:ambiata/disorder.hs
-[submodule "lib/x"]
-	path = lib/x
-	url = git@github.com:ambiata/x
-[submodule "lib/twine"]
-	path = lib/twine
-	url = git@github.com:ambiata/twine
 [submodule "lib/amazonka"]
 	path = lib/amazonka
-	url = git@github.com:ambiata/amazonka
+	url = https://github.com/ambiata/amazonka

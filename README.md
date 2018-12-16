@@ -33,6 +33,8 @@ Permissions required for testing.
 
 ### Running tests
 
+- `AWS_TEST`
+
 Optional environment variables that can be used to disable testing on
 AWS resources, all variables default to 'true'.
 
@@ -110,4 +112,3 @@ Available commands:
   sync                     Sync between two prefixes.
   ls                       Stream a recursively list of objects on a prefix
 ```
-

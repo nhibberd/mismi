@@ -55,7 +55,7 @@ packages:
 #- mismi-autoscaling/test
 #- mismi-cli
   - mismi-core
-#- mismi-core/test
+  - mismi-core/test
 #- mismi-dynamodb
 #- mismi-ec2
 #- mismi-ec2-core
