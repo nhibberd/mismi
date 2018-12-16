@@ -1,0 +1,8 @@
+resolver: lts-11.9
+
+packages:
+  - mismi-p
+  - mismi-core
+  - mismi-core/test
+  - mismi-kernel
+  - mismi-kernel/test

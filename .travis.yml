@@ -24,6 +24,18 @@ script:
 
 matrix:
   include:
-    - env: AWS_TEST=false CABALVER=1.24 GHCVER=8.0.1 STACK_YAML=stack.yaml CACHE_NAME=mismi-8.2.2
+    - env: AWS_TEST=false CABALVER=1.24 GHCVER=8.0.2 STACK_YAML=stack-8.0.2.yaml CACHE_NAME=mismi-8.0.2
+      compiler: ": #stack 8.0.1"
+      addons: {apt: {packages: [ghc-8.0.2], sources: [hvr-ghc]}}
+
+    - env: AWS_TEST=false CABALVER=1.24 GHCVER=8.2.2 STACK_YAML=stack.yaml CACHE_NAME=mismi-master
       compiler: ": #stack 8.2.2"
       addons: {apt: {packages: [ghc-8.2.2], sources: [hvr-ghc]}}
+
+    - env: AWS_TEST=false CABALVER=1.24 GHCVER=8.2.2 STACK_YAML=stack-8.2.2.yaml CACHE_NAME=mismi-8.2.2
+      compiler: ": #stack 8.2.2"
+      addons: {apt: {packages: [ghc-8.2.2], sources: [hvr-ghc]}}
+
+    - env: AWS_TEST=false CABALVER=1.24 GHCVER=8.4.3 STACK_YAML=stack-8.4.3.yaml CACHE_NAME=mismi-8.4.3
+      compiler: ": #stack 8.4.3"
+      addons: {apt: {packages: [ghc-8.4.3], sources: [hvr-ghc]}}
