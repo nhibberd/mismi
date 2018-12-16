@@ -1,18 +1,23 @@
-name:                  mismi-core-test
-version:               0.0.1
-cabal-version:         >= 1.8
-build-type:            Simple
+version: 0.0.1
+
+name:
+  mismi-core-test
+
+cabal-version:
+  >= 1.8
+build-type:
+  Simple
 
 library
   build-depends:
-                       base                            >= 3          && < 6
-                     , amazonka-core                   >= 1.3.6      && < 1.6
-                     , mismi-core
-                     , mismi-p
-                     , mmorph
-                     , hedgehog
-                     , transformers                    >= 0.3        && < 0.6
+      base                            >= 3          && < 5
+    , amazonka-core                   >= 1.3.6      && < 1.6
+    , mismi-core
+    , mismi-p
+    , mmorph
+    , hedgehog
+    , transformers                    >= 0.3        && < 0.6
 
   exposed-modules:
-                       Test.Mismi
-                       Test.Mismi.Gen
+    Test.Mismi
+    Test.Mismi.Gen
