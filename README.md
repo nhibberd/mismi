@@ -3,35 +3,29 @@ mismi
 
 [![Build Status](https://travis-ci.org/nhibberd/mismi.svg?branch=master)](https://travis-ci.org/nhibberd/mismi)
 
+<img src="http://upload.wikimedia.org/wikipedia/commons/a/a4/Nevado_Mismi.jpg" width="307" align="right"/>
+
 > Source of the Amazon
 > - http://en.wikipedia.org/wiki/Amazon_River
 
-![mismi](http://upload.wikimedia.org/wikipedia/commons/a/a4/Nevado_Mismi.jpg)
+`mismi` is a haskell library built on top of
+[amazonka](https://github.com/brendanhay/amazonka) that is designed as
+a robust, higher level of abstraction to AWS interfaces. Sub-packages
+within mismi are built individually per AWS service to aid with
+haskell modularity.
 
-## Permissions
+This library has been used extensively in a production setting at
+[`ambiata`](https://github.com/ambiata) since early 2015.
 
-Permissions required for testing.
-
-### AutoScaling
-
-```
-"autoscaling:AttachLoadBalancers"
-"autoscaling:CreateAutoScalingGroup"
-"autoscaling:CreateLaunchConfiguration"
-"autoscaling:CreateOrUpdateTags"
-"autoscaling:DeleteAutoScalingGroup"
-"autoscaling:DeleteLaunchConfiguration"
-"autoscaling:DescribeAutoScalingGroups"
-"autoscaling:DescribeAutoScalingInstances"
-"autoscaling:DescribeLaunchConfigurations"
-"autoscaling:DescribeLoadBalancers"
-"autoscaling:DescribeTags"
-"autoscaling:DetachLoadBalancers"
-"autoscaling:SetDesiredHealth"
-"autoscaling:UpdateAutoScalingGroup"
-```
 
 ## AWS Testing
+
+### Permissions
+
+Permissions required for testing:
+
+- _tba_
+
 
 ### Running tests
 
@@ -69,48 +63,4 @@ runAWS r a = do
   lgr <- newLogger Trace stdout
   e <- liftIO $ AWS.getEnv r Discover <&> envLogger .~ lgr
   runAWSWithEnv e a
-```
-
-### mismi-s3
-
-##### Current situation
-Use all `aws` implementations by default, where functionality falls short then fallback to
-the `amazonka-s3` implementations.
-
-##### Future plans
-Use `amazonka-s3` implementations by default and fall back to the `aws` implementations
-where amazonka falls short.
-
-##### STS
-The `"X-Amz-Security-Token"` header is only supported by amazonka and therefore all
-required sts functionality will have to be implemented in terms of `amazonka-s3`.
-
-Running amazonka `AWST` - [Mismi.Control.Amazonka](https://github.com/ambiata/mismi/blob/master/mismi-core/src/Mismi/Control/Amazonka.hs#L81)
-```
-runAWSWithCreds :: Region -> AccessKey -> SecretKey -> Maybe SecurityToken -> Maybe UTCTime -> AWS a -> EitherT AWSError IO a
-```
-
-### Command line
-
-The `mismi-cli` module provides a command-line tool for interacting with s3 resources
-```
-cd mismi-cli
-./mafia build
-alias s3="dist/build/s3/s3"
-
-s3 --help
-
-Available commands:
-  upload                   Upload a file to s3.
-  download                 Download a file from s3.
-  copy                     Copy a file from an S3 address to another S3 address.
-  move                     Move an S3 address to another S3 address
-  exists                   Check if an address exists.
-  delete                   Delete an address.
-  write                    Write to an address.
-  read                     Read from an address.
-  cat                      Stream data from an address.
-  size                     Get the size of an address.
-  sync                     Sync between two prefixes.
-  ls                       Stream a recursively list of objects on a prefix
 ```
