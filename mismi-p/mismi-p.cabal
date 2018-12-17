@@ -13,7 +13,9 @@ bug-reports:
 synopsis:
   A commmon prelude for the mismi project.
 description:
-  A commmon prelude for the mismi project.
+  A commmon prelude for use throughout the mismi project.
+  .
+  <https://github.com/nhibberd/mismi>
 category:
   Prelude
 license:
