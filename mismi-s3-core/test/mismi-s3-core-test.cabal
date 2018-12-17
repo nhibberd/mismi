@@ -11,7 +11,7 @@ build-type:
 library
   build-depends:
       base                            >= 3          && < 5
-    , mismi-core
+    , mismi-s3-core
     , mismi-p
     , hedgehog
     , text                            >= 1.1        && < 1.3

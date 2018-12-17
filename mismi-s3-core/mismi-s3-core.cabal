@@ -59,6 +59,10 @@ test-suite test
   hs-source-dirs:
     test
 
+  other-modules:
+    Test.Mismi.S3.Core.Data
+    Test.Mismi.S3.Core.Gen
+
   build-depends:
       base                            >= 3          && < 5
     , mismi-s3-core
