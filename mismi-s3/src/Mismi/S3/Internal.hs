@@ -3,6 +3,7 @@
 {-# LANGUAGE BangPatterns #-}
 module Mismi.S3.Internal (
     f'
+  , (+/)
   , calculateChunks
   , calculateChunksCapped
   , bytesRange
@@ -18,7 +19,7 @@ import           Control.Concurrent (Chan, readChan, threadDelay, writeChan)
 import           Control.Monad.Catch (MonadCatch, onException)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 
-import           Data.Conduit (Source, ($$))
+import           Data.Conduit (ConduitT, runConduit, (.|))
 import qualified Data.Conduit.List as DC
 
 import qualified Data.Text as T
@@ -26,22 +27,30 @@ import           Data.UUID (toString)
 import           Data.UUID.V4 (nextRandom)
 
 import           P
+import           Prelude (Double) -- TODO lift to mismi-p
+import           Prelude (ceiling, (/))
 
 import           Mismi (AWS, rawRunAWS)
 import           Mismi.Amazonka (Env)
 import           Mismi.S3.Data
 import           Network.AWS.S3 (BucketName (..), ObjectKey (..))
+import           Mismi.S3.Internal.Queue (Queue, writeQueue)
 
 import           System.Directory (renameFile, removeFile)
 import           System.IO (IO)
 import           System.FilePath (FilePath, takeDirectory, takeFileName)
 
-import           Twine.Data (Queue, writeQueue)
-
 
 f' :: (BucketName -> ObjectKey -> a) -> Address -> a
 f' f (Address (Bucket b) k) =
   BucketName b `f` ObjectKey (unKey k)
+
+-- | add a "/" at the end of some text if missing and if the text is not empty
+(+/) :: Text -> Text
+(+/) k
+  | T.null k           = ""
+  | T.isSuffixOf "/" k = k
+  | otherwise          = k <> "/"
 
 
 calculateChunksCapped :: Int -> Int -> Int -> [(Int, Int, Int)]
@@ -80,17 +89,17 @@ bytesRange :: Int -> Int -> Text
 bytesRange start end =
   T.pack $ "bytes=" <> show start <> "-" <> show end
 
-sinkChan :: MonadIO m => Source m a -> Chan a -> m Int
+sinkChan :: MonadIO m => ConduitT () a m () -> Chan a -> m Int
 sinkChan source c =
   sinkChanWithDelay 0 source c
 
-sinkChanWithDelay :: MonadIO m => Int -> Source m a -> Chan a -> m Int
+sinkChanWithDelay :: MonadIO m => Int -> ConduitT () a m () -> Chan a -> m Int
 sinkChanWithDelay delay source c =
-  source $$ DC.foldM (\i v -> liftIO $ threadDelay delay >> writeChan c v >> pure (i + 1)) 0
+  runConduit $ source .| DC.foldM (\i v -> liftIO $ threadDelay delay >> writeChan c v >> pure (i + 1)) 0
 
-sinkQueue :: Env -> Source AWS a -> Queue a -> IO ()
+sinkQueue :: Env -> ConduitT () a AWS () -> Queue a -> IO ()
 sinkQueue e source q =
-  rawRunAWS e (source $$ DC.mapM_ (liftIO . writeQueue q))
+  rawRunAWS e (runConduit $ source .| DC.mapM_ (liftIO . writeQueue q))
 
 
 waitForNResults :: Int -> Chan a -> IO [a]

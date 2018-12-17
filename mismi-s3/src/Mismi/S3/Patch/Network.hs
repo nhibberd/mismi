@@ -19,6 +19,7 @@ import           Mismi.Amazonka (getFileSize, unsafeChunkedBody)
 import           Network.AWS.Data.Body
 
 import           P
+import           Prelude (toInteger)
 
 import           System.IO
 
