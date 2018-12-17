@@ -13,7 +13,10 @@ bug-reports:
 synopsis:
   AWS Library
 description:
-  mismi-core
+  mismi-core is a library designed on top of amazonka and
+  amazonka-core that aims to provide useful functions around safety,
+  functionality and robustness, for example: retrying, bracketing,
+  enabling debugging and runner functions with error handling.
 category:
   AWS
 license:
