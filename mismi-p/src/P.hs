@@ -22,6 +22,7 @@ module P (
   -- ** Word
   , Word64
   -- ** Real
+  , Real
   , fromIntegral
   , fromRational
 
@@ -56,6 +57,7 @@ module P (
   , MonadPlus (..)
   , guard
   , msum
+  , mfilter
 
   -- * Data structures
   -- ** Either
@@ -66,6 +68,7 @@ module P (
   , Maybe (..)
   , fromMaybe
   , maybe
+  , listToMaybe
   , hush
   -- ** Tuple
   , fst
@@ -148,6 +151,7 @@ import           Control.Monad as Monad (
          , mapM_
          , when
          , unless
+         , mfilter
          )
 import           Control.Applicative as Applicative (
            Applicative (..)
@@ -211,6 +215,7 @@ import           Data.Maybe as Maybe (
            Maybe (..)
          , fromMaybe
          , maybe
+         , listToMaybe
          )
 import           Data.Monoid as Monoid (
            Monoid (..)
@@ -238,7 +243,8 @@ import           Data.Word as Word (
 import qualified Debug.Trace as Trace
 
 import           GHC.Real as Real (
-           fromIntegral
+           Real
+         , fromIntegral
          , fromRational
          )
 #if MIN_VERSION_base(4,9,0)
@@ -270,6 +276,7 @@ import           Text.Show as Show (
          , showString
          )
 import           Data.Text (Text)
+
 
 
 #if MIN_VERSION_base(4,9,0)

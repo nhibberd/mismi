@@ -1,7 +1,6 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NoImplicitPrelude #-}
@@ -30,26 +29,20 @@ module Mismi.S3.Core.Data (
   ) where
 
 import           Data.Attoparsec.Text (Parser)
-import           Data.Attoparsec.Text (string, manyTill, takeWhile, anyChar, char)
-import           Data.Attoparsec.Text (parseOnly, endOfInput)
+import           Data.Attoparsec.Text (anyChar, char, manyTill, string, takeWhile)
+import           Data.Attoparsec.Text (endOfInput, parseOnly)
 import           Data.Data (Data, Typeable)
-import qualified Data.Text as T
-import           Data.List (init, zipWith)
+import           Data.List (drop, init, reverse, zipWith)
 import           Data.String (String)
-
-import           GHC.Generics (Generic)
+import qualified Data.Text as T
 
 import           P
-
-import           X.Text.Show (gshowsPrec)
-
+import           Prelude (Integral)
 
 data WriteResult =
     WriteOk
   | WriteDestinationExists !Address
-  deriving (Eq, Show, Generic)
-
-instance NFData WriteResult
+    deriving (Eq, Show)
 
 -- |
 -- Describes the semantics for destructive operation that may result in overwritten files.
@@ -57,96 +50,63 @@ instance NFData WriteResult
 data WriteMode =
     Fail        -- ^ Fail rather than overwrite any data.
   | Overwrite   -- ^ Overwrite existing data silently, i.e. we really want to do this.
-  deriving (Eq, Show, Generic)
-
-instance NFData WriteMode
+    deriving (Eq, Show)
 
 foldWriteMode :: a -> a -> WriteMode -> a
-foldWriteMode f o m = case m of
-  Fail -> f
-  Overwrite -> o
+foldWriteMode f o m =
+  case m of
+    Fail ->
+      f
+    Overwrite ->
+      o
 
 data SyncMode =
     FailSync
   | OverwriteSync
   | SkipSync
-  deriving (Eq, Show, Generic)
-
-instance NFData SyncMode
+    deriving (Eq, Show)
 
 foldSyncMode :: a -> a -> a -> SyncMode -> a
-foldSyncMode f o s m = case m of
-  FailSync -> f
-  OverwriteSync -> o
-  SkipSync -> s
+foldSyncMode f o s m =
+  case m of
+    FailSync ->
+      f
+    OverwriteSync ->
+      o
+    SkipSync ->
+      s
 
 newtype Bucket =
   Bucket {
       unBucket :: Text
-    } deriving (Eq, Ord, Generic, Data, Typeable)
-
-instance NFData Bucket
-
-instance Show Bucket where
-  showsPrec =
-    gshowsPrec
+    } deriving (Eq, Show, Ord, Data, Typeable)
 
 newtype Key =
   Key {
       unKey :: Text
-    } deriving (Eq, Ord, Generic, Data, Typeable)
-
-instance NFData Key
-
-instance Show Key where
-  showsPrec =
-    gshowsPrec
+    } deriving (Eq, Show, Ord, Data, Typeable)
 
 data Address =
   Address {
       bucket :: !Bucket
     , key :: !Key
-    } deriving (Eq, Ord, Generic, Data, Typeable)
-
-instance NFData Address
-
-instance Show Address where
-  showsPrec =
-    gshowsPrec
+    } deriving (Eq, Show, Ord, Data, Typeable)
 
 newtype ReadGrant =
   ReadGrant {
       readGrant :: Text
-    } deriving (Eq, Generic)
-
-instance NFData ReadGrant
-
-instance Show ReadGrant where
-  showsPrec =
-    gshowsPrec
+    } deriving (Eq, Show)
 
 newtype Bytes =
   Bytes {
       unBytes :: Int64
-    } deriving (Eq, Ord, Enum, Num, Real, Integral, Generic)
-
-instance NFData Bytes
-
-instance Show Bytes where
-  showsPrec =
-    gshowsPrec
+    } deriving (Eq, Show, Ord, Enum, Num, Real, Integral)
 
 data Sized a =
   Sized {
       sizedBytes :: !Bytes
     , sizedValue :: !a
-    } deriving (Eq, Ord, Generic, Functor, Foldable, Traversable)
-
-instance NFData a => NFData (Sized a)
-
-instance Show a => Show (Sized a) where
-  showsPrec =
-    gshowsPrec
+    } deriving (Eq, Show, Ord, Functor, Foldable, Traversable)
 
 (//) :: Key -> Key -> Key
 (//) =
@@ -154,9 +114,10 @@ instance Show a => Show (Sized a) where
 
 combineKey :: Key -> Key -> Key
 combineKey (Key p1) (Key p2) =
-  if  "/" `T.isSuffixOf` p1 || p1 == "" || "/" `T.isPrefixOf` p2
-    then Key $ p1 <> p2
-    else Key $ p1 <> "/" <> p2
+  if  "/" `T.isSuffixOf` p1 || p1 == "" || "/" `T.isPrefixOf` p2 then
+    Key $ p1 <> p2
+  else
+    Key $ p1 <> "/" <> p2
 
 -- | @withKey f address@ : Replace the 'Key' part of an 'Address' with a new
 --   'Key' resulting from the application of function @f@ to the old 'Key'.
@@ -178,29 +139,31 @@ basename =
 -- prefix key
 removeCommonPrefix :: Address -> Address -> Maybe Key
 removeCommonPrefix prefix addr =
-  let dropMaybe :: String -> String -> Maybe Text
-      dropMaybe x y =
-        bool
-          Nothing
-          (Just . T.pack $ drop (length y) x)
-          (check x y)
-      check :: String -> String -> Bool
-      check x y = y == zipWith const x y
+  let
+    dropMaybe :: String -> String -> Maybe Text
+    dropMaybe x y =
+      bool
+        Nothing
+        (Just . T.pack $ drop (length y) x)
+        (check x y)
+
+    check :: String -> String -> Bool
+    check x y =
+      y == zipWith const x y
   in
-  if bucket addr == bucket prefix
-     then
-       if unKey (key prefix) == ""
-          then
-            Just $ key addr
-          else
-            let bk = unKey (key prefix)
-                b = bool (bk <> "/") bk ("/" `T.isSuffixOf` bk)
-                pk = T.unpack b
-                kk = T.unpack (unKey $ key addr)
-            in
-              Key <$> dropMaybe kk pk
+  if bucket addr == bucket prefix then
+     if unKey (key prefix) == "" then
+        Just $ key addr
      else
-       Nothing
+       let
+         bk = unKey (key prefix)
+         b = bool (bk <> "/") bk ("/" `T.isSuffixOf` bk)
+         pk = T.unpack b
+         kk = T.unpack (unKey $ key addr)
+       in
+         Key <$> dropMaybe kk pk
+  else
+    Nothing
 
 -- | Render an 'Address' to 'Text', including the "s3://" prefix.
 addressToText :: Address -> Text
@@ -210,7 +173,7 @@ addressToText a =
 -- | Parse an 'Address' from 'Text'. If the parse fails, 'Nothing' is returned.
 addressFromText :: Text -> Maybe Address
 addressFromText =
-  rightToMaybe . parseOnly s3Parser
+  hush . parseOnly s3Parser
 
 s3Parser :: Parser Address
 s3Parser =

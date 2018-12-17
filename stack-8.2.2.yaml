@@ -6,6 +6,8 @@ packages:
   - mismi-core/test
   - mismi-kernel
   - mismi-kernel/test
+  - mismi-s3-core
+  - mismi-s3-core/test
 
 extra-deps:
   - git: https://github.com/brendanhay/amazonka.git
