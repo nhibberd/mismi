@@ -13,7 +13,7 @@ bug-reports:
 synopsis:
   AWS Library
 description:
-  mismi-kernel
+  mismi-kernel is a simple dependency-free encoding of amazon regions.
 category:
   AWS
 license:
