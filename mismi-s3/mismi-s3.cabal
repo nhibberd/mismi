@@ -121,15 +121,15 @@ test-suite test
     , amazonka
     , amazonka-core
     , amazonka-s3
-    , ambiata-disorder-core
-    , ambiata-disorder-corpus
+--    , ambiata-disorder-core
+--    , ambiata-disorder-corpus
     , mismi-core
     , mismi-core-test
     , mismi-s3
     , mismi-s3-core
     , mismi-s3-core-test
     , mismi-p
-    , ambiata-x-eithert
+--    , ambiata-x-eithert
     , conduit
     , containers                      == 0.5.*
     , directory
@@ -170,20 +170,20 @@ test-suite test-io
     , amazonka
     , amazonka-core
     , amazonka-s3
-    , ambiata-disorder-core
-    , ambiata-disorder-corpus
+--    , ambiata-disorder-core
+--    , ambiata-disorder-corpus
     , mismi-core
     , mismi-core-test
     , mismi-s3
     , mismi-s3-core
     , mismi-s3-core-test
     , mismi-p
-    , ambiata-x-eithert
+--    , ambiata-x-eithert
     , bytestring
     , conduit
     , cryptohash
     , directory
-    , ambiata-twine
+--    , ambiata-twine
     , exceptions
     , filepath
     , http-client
@@ -220,15 +220,15 @@ test-suite test-reliability
     , amazonka
     , amazonka-core
     , amazonka-s3
-    , ambiata-disorder-core
-    , ambiata-disorder-corpus
+--    , ambiata-disorder-core
+--    , ambiata-disorder-corpus
     , mismi-core
     , mismi-core-test
     , mismi-s3
     , mismi-s3-core
     , mismi-s3-core-test
     , mismi-p
-    , ambiata-x-eithert
+--    , ambiata-x-eithert
     , bytestring
     , conduit
     , cryptohash
@@ -265,14 +265,14 @@ benchmark bench
 
   build-depends:
       base
-    , ambiata-disorder-corpus
+--    , ambiata-disorder-corpus
     , mismi-core
     , mismi-core-test
     , mismi-s3
     , mismi-s3-core
     , mismi-s3-core-test
     , mismi-p
-    , ambiata-x-eithert
+--    , ambiata-x-eithert
     , criterion                       == 1.1.*
     , conduit-extra                   >= 1.1.13     && < 1.2
     , exceptions                      == 0.8.*
