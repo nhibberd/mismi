@@ -14,8 +14,6 @@ import           GHC.Conc (atomically)
 
 import           P
 
-import           System.IO
-
 newtype Queue a =
   Queue {
       queue :: TBQueue a

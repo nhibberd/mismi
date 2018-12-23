@@ -9,7 +9,7 @@ import           Control.Monad
 import           Control.Monad.Trans.Resource
 import           Control.Monad.IO.Class
 
-import           Data.Conduit
+import           Data.Conduit (ConduitT, yield, bracketP)
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -36,7 +36,7 @@ chunkedFile c f = do
 sourceFileChunks :: MonadResource m
                  => ChunkSize
                  -> FilePath
-                 -> Source m BS.ByteString
+                 -> ConduitT () BS.ByteString m ()
 sourceFileChunks (ChunkSize sz) f =
   bracketP (openBinaryFile f ReadMode) hClose go
   where
