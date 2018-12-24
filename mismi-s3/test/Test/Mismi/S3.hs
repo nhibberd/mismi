@@ -2,8 +2,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Test.Mismi.S3 (
     module X
+
   , Token (..)
+  , genToken
+
   , LocalPath (..)
+  , genLocalPath
+
   , testBucket
   , createSmallFiles
   , files
@@ -18,6 +23,7 @@ module Test.Mismi.S3 (
 
 import           Control.Monad.Catch
 import           Control.Monad.Reader (ask)
+import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Resource
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 
@@ -27,7 +33,9 @@ import qualified Data.Text.IO as T
 import           Data.UUID as U
 import           Data.UUID.V4 as U
 
-import           Disorder.Corpus
+import           Hedgehog
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
 import           System.Environment (lookupEnv)
 import           System.Posix.Env
@@ -39,30 +47,23 @@ import           Mismi.S3
 
 import           P
 
-import           System.IO
-
-import           Test.QuickCheck
 import           Test.Mismi as X
-import           Test.Mismi.Arbitrary ()
-import           Test.Mismi.S3.Arbitrary ()
-
-import           X.Control.Monad.Trans.Either
 
 data Token =
   Token {
       unToken :: Text
     } deriving (Eq, Show)
 
-instance Arbitrary Token where
-  arbitrary =
-    genToken
-
 genToken :: Gen Token
 genToken = do
-  n <- T.pack . show <$> (choose (0, 10000) :: Gen Int)
-  c <- elements cooking
-  m <- elements muppets
-  sep <- elements ["-", "=", "."]
+  let
+    genA = Gen.text (Range.linear 10 15) Gen.alphaNum
+    genB = Gen.text (Range.linear 5 10) Gen.alphaNum
+
+  n <- T.pack . show <$> (Gen.int $ Range.linear 0 10000)
+  c <- genA
+  m <- genB
+  sep <- Gen.element ["-", "=", "."]
   pure . Token . T.intercalate sep $ [c, m, n]
 
 data LocalPath =
@@ -70,11 +71,14 @@ data LocalPath =
       localPath :: FilePath
     } deriving (Eq, Show)
 
-instance Arbitrary LocalPath where
-  arbitrary = do
-    x <- elements weather
-    xs <- listOf $ elements simpsons
-    pure . LocalPath $ L.intercalate "/" (T.unpack <$> x : xs)
+genLocalPath :: Gen LocalPath
+genLocalPath =  do
+  let
+    gen = Gen.text (Range.linear 5 10) Gen.alphaNum
+
+  x <- gen
+  xs <- Gen.list (Range.linear 0 5) gen
+  pure . LocalPath $ L.intercalate "/" (T.unpack <$> x : xs)
 
 testBucket :: IO Bucket
 testBucket =
@@ -91,7 +95,7 @@ files prefix name n =
 newAddress :: AWS Address
 newAddress = do
   a <- liftIO $ do
-    t <- generate genToken
+    t <- Gen.sample genToken
     b <- testBucket
     u <- T.pack . U.toString <$> U.nextRandom
     pure $ Address b (Key . T.intercalate "/" $ ["mismi", u, unToken t])
@@ -102,7 +106,7 @@ newAddress = do
 newFilePath :: AWS FilePath
 newFilePath = do
   p <- liftIO $ do
-    t <- generate genToken
+    t <- Gen.sample genToken
     d <- getTemporaryDirectory
     u <- liftIO $ U.toString <$> U.nextRandom
     let p = d <> "/mismi/" <> u <> "-" <> (T.unpack . unToken $ t)
@@ -120,22 +124,27 @@ vk k = do
 addCleanupFinalizer :: Address -> AWS ()
 addCleanupFinalizer a = do
   e <- ask
-  unlessM (vk "TEST_SKIP_CLEANUP_RESOURCES") $ do
-    void $ register (eitherT throwM pure . runAWS e $ listRecursively a >>= mapM_ delete >> delete a)
+  r <- vk "TEST_SKIP_CLEANUP_RESOURCES"
+  unless r $ do
+    void $ register (either throwM pure =<< runExceptT (runAWS e $
+      listRecursively a >>= mapM_ delete >> delete a))
     void $ register (T.putStrLn $ "Cleaning up [" <> addressToText a <> "]")
 
 addPrintFinalizer :: Address -> AWS ()
-addPrintFinalizer a =
-  whenM (vk "TEST_PRINT_PATHS") .
+addPrintFinalizer a = do
+  r <- vk "TEST_PRINT_PATHS"
+  when r .
     void $ register (T.putStrLn $ "Temporary s3 address [" <> addressToText a <> "]")
 
 addLocalCleanupFinalizer :: FilePath -> AWS ()
 addLocalCleanupFinalizer a = do
-  unlessM (vk "TEST_SKIP_CLEANUP_RESOURCES") $ do
+  r <- vk "TEST_SKIP_CLEANUP_RESOURCES"
+  unless r $ do
     void $ register (removeDirectoryRecursive a)
     void $ register (T.putStrLn $ "Cleaning up [" <> T.pack a <> "]")
 
 addLocalPrintFinalizer :: FilePath -> AWS ()
-addLocalPrintFinalizer a =
-  whenM (vk "TEST_PRINT_PATHS") .
+addLocalPrintFinalizer a = do
+  r <- vk "TEST_PRINT_PATHS"
+  when r .
     void $ register (T.putStrLn $ "Temporary local filepath [" <> T.pack a <> "]")

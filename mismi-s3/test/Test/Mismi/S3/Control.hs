@@ -1,29 +1,33 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 module Test.Mismi.S3.Control where
 
-import           Control.Monad.IO.Class
+import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.Trans.Class (lift)
+
+import           Hedgehog
 
 import           Mismi.S3.Commands
 
 import           P
 
-import           System.IO
+import           Test.Mismi (liftAWS, runAWSDefaultRegion)
+import           Test.Mismi.S3 (newAddress)
 
-import           Test.Mismi
-import           Test.Mismi.S3
-import           Test.QuickCheck
+prop_finalizer :: Property
+prop_finalizer =
+  withTests 10 . property . liftAWS $ do
 
-prop_finalizer = testAWS $ do
-  r <- liftIO . runAWSDefaultRegion $ do
-    a <- newAddress
-    writeOrFail a ""
-    pure $ a
-  e <- exists r
-  pure $ e === False
+    r <- liftIO . runAWSDefaultRegion $ do
+      a <- newAddress
+      writeOrFail a ""
+      pure $ a
 
-return []
+    e <- lift $ exists r
+
+    e === False
+
 tests :: IO Bool
-tests = $forAllProperties $ quickCheckWithResult (stdArgs { maxSuccess = 10 })
+tests =
+  checkSequential $$(discover)

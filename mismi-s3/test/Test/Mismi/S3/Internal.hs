@@ -4,31 +4,32 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Test.Mismi.S3.Internal where
 
+import           Hedgehog
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
+
 import           Mismi.S3.Internal
 
 import           P
 
-import           System.IO
-
-import           Test.QuickCheck
-import           Test.QuickCheck.Instances ()
-
 prop_chunks :: Property
 prop_chunks =
-  forAll (choose (1, 10000)) $ \size ->
-    forAll (choose (1, size)) $ \chunk ->
-      foldl' (+) 0 (snd' <$> calculateChunks size chunk) === size
+  property $ do
+    size <- forAll $ Gen.int (Range.linear 1 10000)
+    chunk <- forAll $ Gen.int (Range.linear 1 size)
+    foldl' (+) 0 (snd' <$> calculateChunks size chunk) === size
 
 prop_chunks_capped :: Property
 prop_chunks_capped =
-  forAll (choose (10, 10000)) $ \size ->
-    forAll (choose (1, size)) $ \chunk ->
-      forAll (choose (5, 15)) $ \cap ->
-        length (calculateChunksCapped size chunk cap) <= cap
+  property $ do
+    size <- forAll $ Gen.int (Range.linear 10 10000)
+    chunk <- forAll $ Gen.int (Range.linear 1 size)
+    cap <- forAll $ Gen.int (Range.constant 5 15)
+    assert $ length (calculateChunksCapped size chunk cap) <= cap
 
 snd' :: (Int, Int, Int) -> Int
 snd' (_, b, _) = b
 
-return []
 tests :: IO Bool
-tests = $quickCheckAll
+tests =
+  checkSequential $$(discover)
