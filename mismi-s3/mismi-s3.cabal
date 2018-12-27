@@ -1,4 +1,4 @@
-version: 0.0.1
+version: 0.0.2
 
 name:
   mismi-s3
@@ -35,9 +35,9 @@ extra-source-files:
 library
   build-depends:
       base                            >= 3          && < 5
-    , mismi-core
-    , mismi-s3-core
-    , mismi-p
+    , mismi-core                      == 0.0.2.*
+    , mismi-s3-core                   == 0.0.2.*
+    , mismi-p                         == 0.0.2.*
     , template-haskell
     , amazonka                        >= 1.5        && < 1.7
     , amazonka-core                   >= 1.5        && < 1.7
@@ -122,12 +122,12 @@ test-suite test
     , amazonka-core                   >= 1.5        && < 1.7
     , amazonka-s3                     >= 1.5        && < 1.7
     , hedgehog
-    , mismi-core
-    , mismi-core-test
-    , mismi-s3
-    , mismi-s3-core
-    , mismi-s3-core-test
-    , mismi-p
+    , mismi-core                      == 0.0.2.*
+    , mismi-core-test                 == 0.0.2.*
+    , mismi-s3                        == 0.0.2.*
+    , mismi-s3-core                   == 0.0.2.*
+    , mismi-s3-core-test              == 0.0.2.*
+    , mismi-p                         == 0.0.2.*
     , conduit                         >= 1.2        && < 1.4
     , containers                      == 0.5.*
     , directory                       >= 1.2        && < 1.4
@@ -167,12 +167,12 @@ test-suite test-io
 
   build-depends:
       base
-    , mismi-core
-    , mismi-core-test
-    , mismi-s3
-    , mismi-s3-core
-    , mismi-s3-core-test
-    , mismi-p
+    , mismi-core                      == 0.0.2.*
+    , mismi-core-test                 == 0.0.2.*
+    , mismi-s3                        == 0.0.2.*
+    , mismi-s3-core                   == 0.0.2.*
+    , mismi-s3-core-test              == 0.0.2.*
+    , mismi-p                         == 0.0.2.*
     , bytestring                      >= 0.10       && < 0.11
     , cryptohash
     , directory                       >= 1.2        && < 1.4
@@ -210,10 +210,10 @@ test-suite test-reliability
 
   build-depends:
       base
-    , mismi-core
-    , mismi-core-test
-    , mismi-s3
-    , mismi-p
+    , mismi-core                      == 0.0.2.*
+    , mismi-core-test                 == 0.0.2.*
+    , mismi-s3                        == 0.0.2.*
+    , mismi-p                         == 0.0.2.*
     , directory                       >= 1.2        && < 1.4
     , exceptions                      >= 0.7        && < 0.11
     , filepath                        >= 1.3        && < 1.5
@@ -244,10 +244,10 @@ benchmark bench
 
   build-depends:
       base
-    , mismi-core
-    , mismi-core-test
-    , mismi-s3
-    , mismi-p
+    , mismi-core                      == 0.0.2.*
+    , mismi-core-test                 == 0.0.2.*
+    , mismi-s3                        == 0.0.2.*
+    , mismi-p                         == 0.0.2.*
     , criterion                       >= 1.3        && < 1.5
     , conduit-extra                   >= 1.1.13     && < 1.5
     , directory                       >= 1.2        && < 1.4

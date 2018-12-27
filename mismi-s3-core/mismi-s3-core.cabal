@@ -1,4 +1,4 @@
-version: 0.0.1
+version: 0.0.2
 
 name:
   mismi-s3-core
@@ -32,7 +32,7 @@ tested-with:
 library
   build-depends:
       base                            >= 3          && < 5
-    , mismi-p
+    , mismi-p                         == 0.0.2.*
     , attoparsec                      >= 0.12       && < 0.14
     , text                            >= 1.1        && < 1.3
 
@@ -65,7 +65,7 @@ test-suite test
 
   build-depends:
       base                            >= 3          && < 5
-    , mismi-s3-core
-    , mismi-p
+    , mismi-s3-core                   == 0.0.2.*
+    , mismi-p                         == 0.0.2.*
     , hedgehog
     , text                            >= 1.1        && < 1.3
