@@ -12,7 +12,7 @@ done
 
 for SERVICE in ${SERVICES}; do
    stack sdist "${SERVICE}"
-   stack upload
+#   stack upload
 done
 
 

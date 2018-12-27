@@ -62,7 +62,7 @@ test-suite test
 
   build-depends:
       base                            >= 3          && < 5
-    , mismi-kernel                    == 0.0.2.*
+    , mismi-kernel
     , mismi-p                         == 0.0.2.*
     , hedgehog
     , text                            >= 1.1        && < 1.3
