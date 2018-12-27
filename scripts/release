@@ -6,8 +6,10 @@ SERVICES="mismi-p \
   mismi-s3-core \
   mismi-s3"
 
+stack clean
+
 for SERVICE in ${SERVICES} ; do
-   stack build --fast "${SERVICE}"
+   stack build --fast "${SERVICE}" --force-dirty --pedantic
 done
 
 for SERVICE in ${SERVICES}; do
