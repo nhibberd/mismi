@@ -1,4 +1,4 @@
-version: 0.0.1
+version: 0.0.2
 
 name:
   mismi-s3-test
@@ -11,10 +11,10 @@ build-type:
 library
   build-depends:
       base                            >= 3          && < 5
-    , mismi-core
-    , mismi-core-test
-    , mismi-s3
-    , mismi-p
+    , mismi-core                      == 0.0.2.*
+    , mismi-core-test                 == 0.0.2.*
+    , mismi-s3                        == 0.0.2.*
+    , mismi-p                         == 0.0.2.*
     , hedgehog
     , directory                       >= 1.2        && < 1.4
     , exceptions                      >= 0.7        && < 0.11

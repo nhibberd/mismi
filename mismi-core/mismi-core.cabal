@@ -1,4 +1,4 @@
-version: 0.0.1
+version: 0.0.2
 
 name:
   mismi-core
@@ -36,8 +36,8 @@ extra-source-files:
 library
   build-depends:
       base                            >= 3          && < 5
-    , mismi-kernel
-    , mismi-p
+    , mismi-kernel                    == 0.0.2.*
+    , mismi-p                         == 0.0.2.*
     , amazonka                        >= 1.5        && < 1.7
     , amazonka-core                   >= 1.5        && < 1.7
     , bytestring                      >= 0.10       && < 0.11
@@ -87,8 +87,8 @@ test-suite test
 
   build-depends:
       base
-    , mismi-core
-    , mismi-p
+    , mismi-core                      == 0.0.2.*
+    , mismi-p                         == 0.0.2.*
     , mmorph                          >= 1.0        && < 1.2
     , amazonka-core                   >= 1.5        && < 1.7
     , hedgehog
@@ -116,9 +116,9 @@ test-suite test-io
 
   build-depends:
       base
-    , mismi-core
-    , mismi-core-test
-    , mismi-p
+    , mismi-core                      == 0.0.2.*
+    , mismi-core-test                 == 0.0.2.*
+    , mismi-p                         == 0.0.2.*
     , mmorph                          >= 1.0        && < 1.2
     , amazonka-core                   >= 1.5        && < 1.7
     , hedgehog
