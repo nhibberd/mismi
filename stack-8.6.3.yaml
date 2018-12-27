@@ -1,0 +1,19 @@
+resolver: lts-13.0
+
+packages:
+  - mismi-p
+  - mismi-core
+  - mismi-core/test
+  - mismi-kernel
+  - mismi-kernel/test
+  - mismi-s3-core
+  - mismi-s3-core/test
+  - mismi-s3
+  - mismi-s3/test
+
+extra-deps:
+  - git: https://github.com/brendanhay/amazonka.git
+    commit: c9d8a62118b2269fb54b1e89c4e92106e8243050
+    subdirs:
+      - amazonka
+      - core
