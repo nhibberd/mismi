@@ -1,4 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE CPP #-}
 module Mismi.S3.Internal.Queue (
     Queue
   , newQueue
@@ -11,8 +12,16 @@ module Mismi.S3.Internal.Queue (
 import           Control.Concurrent.STM.TBQueue (TBQueue, newTBQueue, tryReadTBQueue, readTBQueue, writeTBQueue, isEmptyTBQueue)
 
 import           GHC.Conc (atomically)
+#if MIN_VERSION_stm(2,5,0)
+import           GHC.Natural (naturalFromInteger)
+#endif
 
 import           P
+
+#if MIN_VERSION_stm(2,5,0)
+import           Prelude (toInteger)
+#endif
+
 
 newtype Queue a =
   Queue {
@@ -21,7 +30,12 @@ newtype Queue a =
 
 newQueue :: Int -> IO (Queue a)
 newQueue i =
+#if MIN_VERSION_stm(2,5,0)
+  atomically $ Queue <$> newTBQueue (naturalFromInteger $ toInteger i)
+#else
   atomically $ Queue <$> newTBQueue i
+#endif
+
 
 readQueue :: Queue a -> IO a
 readQueue =
