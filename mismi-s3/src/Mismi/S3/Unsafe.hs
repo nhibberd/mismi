@@ -107,7 +107,7 @@ download a f =
 
 downloadWithMode :: WriteMode -> Address -> FilePath -> AWS ()
 downloadWithMode m a f =
-  either hoistDownloadError pure =<< runExceptT (Commands.pdownloadWithMode m a f)
+  either hoistDownloadError pure =<< runExceptT (Commands.downloadWithMode m a f)
 
 
 downloadRecursive :: Address -> FilePath -> AWS ()
