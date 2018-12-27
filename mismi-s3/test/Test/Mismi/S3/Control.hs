@@ -18,9 +18,9 @@ import           Test.Mismi.S3 (newAddress)
 prop_finalizer :: Property
 prop_finalizer =
   withTests 10 . property . liftAWS $ do
+    a <- newAddress
 
     r <- liftIO . runAWSDefaultRegion $ do
-      a <- newAddress
       writeOrFail a ""
       pure $ a
 
