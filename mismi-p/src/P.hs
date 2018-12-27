@@ -25,6 +25,8 @@ module P (
   , Real
   , fromIntegral
   , fromRational
+  -- ** Double
+  , Double
 
   -- * Algebraic structures
   -- ** Monoid
@@ -53,6 +55,7 @@ module P (
   , mapM_
   , when
   , unless
+  , forever
   -- ** MonadPlus
   , MonadPlus (..)
   , guard
@@ -69,6 +72,7 @@ module P (
   , fromMaybe
   , maybe
   , listToMaybe
+  , isJust
   , hush
   -- ** Tuple
   , fst
@@ -152,6 +156,7 @@ import           Control.Monad as Monad (
          , when
          , unless
          , mfilter
+         , forever
          )
 import           Control.Applicative as Applicative (
            Applicative (..)
@@ -216,6 +221,7 @@ import           Data.Maybe as Maybe (
          , fromMaybe
          , maybe
          , listToMaybe
+         , isJust
          )
 import           Data.Monoid as Monoid (
            Monoid (..)
@@ -254,6 +260,7 @@ import           GHC.Stack (HasCallStack)
 import           Prelude as Prelude (
            Enum (..)
          , Num (..)
+         , Double
          , Integer
          , seq
          , ($!)

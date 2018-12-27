@@ -22,7 +22,7 @@ import qualified Data.Text.Encoding as T
 import qualified Data.Text.IO as T
 
 import           Control.Lens ((^.), to)
-import           Control.Monad (replicateM_) -- TODO mismi-p
+import           Control.Monad (replicateM_)
 
 import           Hedgehog
 import qualified Hedgehog.Gen as Gen
@@ -30,6 +30,7 @@ import qualified Hedgehog.Range as Range
 
 import           Mismi.S3
 import qualified Mismi.S3.Amazonka as A
+import qualified Mismi.S3.Unsafe as Unsafe
 
 import           P
 
@@ -49,7 +50,7 @@ prop_exists :: Property
 prop_exists =
   withTests 2 . property . liftAWS $ do
     a <- newAddress
-    lift $ writeOrFail a ""
+    lift $ Unsafe.write a ""
     result <- lift $ exists a
     result === True
 
@@ -72,7 +73,7 @@ prop_exists_prefix =
   withTests 2 . property . liftAWS $ do
     k <- forAll $ Gen.genKey
     a <- newAddress
-    lift $ writeOrFail (withKey (// k) a) ""
+    lift $ Unsafe.write (withKey (// k) a) ""
     e <- lift $ existsPrefix a
     e === True
 
@@ -80,7 +81,7 @@ prop_exists_prefix_missing :: Property
 prop_exists_prefix_missing =
   withTests 2 . property . liftAWS $ do
     a <- newAddress
-    lift $ writeOrFail a ""
+    lift $ Unsafe.write a ""
     e <- lift $ existsPrefix a
     e === False
 
@@ -120,7 +121,7 @@ prop_getObjectsR = -- d p1 p2 = p1 /= p2 ==> testAWS $ do
     let
       keys = [p1, p2 // p1, p2 // p2]
     lift . forM_ keys $ \k ->
-      writeOrFail (withKey (// k) root) d
+      Unsafe.write (withKey (// k) root) d
     objs <- lift $ getObjectsRecursively root
     on (===) L.sort ((^. A.oKey . to A.toText) <$> objs) (unKey . (//) (key root) <$> keys)
 
@@ -134,7 +135,7 @@ prop_pagination_list =
     n <- forAll $ Gen.int (Range.linear 1000 1500)
     a <- newAddress
     lift . forM_ [1..n] $ \n' ->
-      writeOrFail (withKey(// Key (m <> T.pack (show n'))) a) ""
+      Unsafe.write (withKey(// Key (m <> T.pack (show n'))) a) ""
     r' <- lift $ list a
     length r' === n
 
@@ -143,7 +144,7 @@ prop_size =
   withTests 10 . property . liftAWS $ do
     d <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
     a <- newAddress
-    lift $ writeOrFail a d
+    lift $ Unsafe.write a d
     i <- lift $ size a
     i === (Just . fromIntegral . BS.length $ T.encodeUtf8 d)
 
@@ -159,7 +160,7 @@ prop_size_recursively =
   withTests 2 . property . liftAWS $ do
     d <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
     a <- newAddress
-    lift $ writeOrFail a d
+    lift $ Unsafe.write a d
     r <- lift $ sizeRecursively (a { key = dirname $ key a })
     r === [Sized (fromIntegral . BS.length $ T.encodeUtf8 d) a]
 
@@ -177,13 +178,13 @@ prop_concat =
       bs10k = BS.concat $ L.replicate 10000 "fred"
     liftIO $ withFile s WriteMode $ \h ->
       replicateM_ 1000 (BS.hPut h bs10k)
-    lift $ uploadOrFail s a
-    lift $ uploadOrFail s b
+    lift $ Unsafe.upload s a
+    lift $ Unsafe.upload s b
 
     r <- lift . runExceptT $ concatMultipart Fail 1 [a, b] c
     () <- either (fail . show . renderConcatError) pure r
 
-    lift $ downloadOrFail c d
+    lift $ Unsafe.download c d
     s' <- liftIO $ LBS.readFile s
     d' <- liftIO $ LBS.readFile d
     sha1 (LBS.concat [s', s']) === sha1 d'
@@ -204,7 +205,7 @@ prop_concat_empty_input_files =
   withTests 2 . property . liftAWS $ do
     a <- newAddress
     b <- newAddress
-    lift $ writeOrFail a ""
+    lift $ Unsafe.write a ""
     r <- lift . runExceptT $ concatMultipart Fail 1 [a] b
     case r of
       Left NoInputFilesWithData ->
@@ -218,7 +219,7 @@ prop_copy =
     t <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
     a <- newAddress
     b <- newAddress
-    lift $ writeOrFail a t
+    lift $ Unsafe.write a t
     lift $ either (fail . T.unpack . renderCopyError) pure =<< runExceptT (copy a b)
     a' <- lift $ read a
     b' <- lift $ read b
@@ -242,8 +243,8 @@ prop_copy_overwrite =
     t' <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
     a <- newAddress
     b <- newAddress
-    lift $ writeOrFail a t
-    lift $ writeOrFail b t'
+    lift $ Unsafe.write a t
+    lift $ Unsafe.write b t'
     lift $ either (fail . T.unpack . renderCopyError) pure =<< runExceptT (copyWithMode Overwrite a b)
     b' <- lift $ read b
     b' === Just t
@@ -254,8 +255,8 @@ prop_copy_fail =
     t <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
     a <- newAddress
     b <- newAddress
-    lift $ writeOrFail a t
-    lift $ writeOrFail b t
+    lift $ Unsafe.write a t
+    lift $ Unsafe.write b t
     r <- lift . runExceptT $ copyWithMode Fail a b
     case r of
       Left (CopyDestinationExists z) ->
@@ -283,7 +284,7 @@ prop_copy_multipart =
       replicateM_ 1000 (LBS.hPut h (LBS.fromChunks . return $ (BS.concat . L.replicate 10000 $ bs)))
     liftIO . putStrLn $ "Generated file"
 
-    lift $ uploadOrFail s a
+    lift $ Unsafe.upload s a
     liftIO . putStrLn $ "Uploaded file"
 
     liftIO . putStrLn $ "Running copy ..."
@@ -306,7 +307,7 @@ prop_move =
     t <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
     s <- newAddress
     d <- newAddress
-    lift $ writeOrFail s t
+    lift $ Unsafe.write s t
     lift $ either (fail . T.unpack . renderCopyError) pure =<< runExceptT (move s d)
     es <- lift $ exists s
     ed <- lift $ exists d
@@ -325,7 +326,7 @@ prop_upload_mode =
       t = p </> localPath l
     liftIO . D.createDirectoryIfMissing True $ F.takeDirectory t
     liftIO $ T.writeFile t d
-    lift $ uploadWithModeOrFail m t a
+    lift $ Unsafe.uploadWithMode m t a
     r <- lift $ read a
     r === Just d
 
@@ -341,9 +342,9 @@ prop_upload_overwrite =
     let t = p </> localPath l
     liftIO . D.createDirectoryIfMissing True $ F.takeDirectory t
     liftIO $ T.writeFile t d1
-    lift $ uploadWithModeOrFail Fail t a
+    lift $ Unsafe.uploadWithMode Fail t a
     liftIO $ T.writeFile t d2
-    lift $ uploadWithModeOrFail Overwrite t a
+    lift $ Unsafe.uploadWithMode Overwrite t a
     r <- lift $ read a
     r === Just d2
 
@@ -358,7 +359,7 @@ prop_upload_fail =
     let t = p </> localPath l
     liftIO . D.createDirectoryIfMissing True $ F.takeDirectory t
     liftIO $ T.writeFile t d
-    lift $ uploadWithModeOrFail Fail t a
+    lift $ Unsafe.uploadWithMode Fail t a
     r <- lift . runExceptT $ uploadWithMode Fail t a
     case r of
       Left (UploadDestinationExists _) ->
@@ -376,7 +377,7 @@ prop_upload =
     let t = p </> localPath l
     liftIO . D.createDirectoryIfMissing True $ F.takeDirectory t
     liftIO $ T.writeFile t d
-    lift $ uploadOrFail t a
+    lift $ Unsafe.upload t a
     r <- lift $ read a
     r === Just d
 
@@ -392,7 +393,7 @@ prop_upload_multipart =
     liftIO . D.createDirectoryIfMissing True $ F.takeDirectory t
     liftIO $ withFile t WriteMode $ \h ->
       replicateM_ 1000 (LBS.hPut h (LBS.fromChunks . return $ (BS.concat . L.replicate 10000 $ bs)))
-    lift $ uploadOrFail t a
+    lift $ Unsafe.upload t a
     result <- lift $ exists a
     assert result
 
@@ -460,8 +461,8 @@ prop_list =
     m <- forAll $ Gen.text (Range.linear 10 20) Gen.alphaNum
     s <- forAll $ Gen.text (Range.linear 20 30) Gen.alphaNum
     a <- newAddress
-    lift $ writeOrFail (withKey (// Key m) a) ""
-    lift $ writeOrFail (withKey (// (Key s // Key m)) a) ""
+    lift $ Unsafe.write (withKey (// Key m) a) ""
+    lift $ Unsafe.write (withKey (// (Key s // Key m)) a) ""
     r' <- lift $ list a
     (Just . Key <$> [m, s <> "/"]) === (removeCommonPrefix a <$> r')
 
@@ -471,8 +472,8 @@ prop_listObjects =
     m <- forAll $ Gen.text (Range.linear 10 20) Gen.alphaNum
     s <- forAll $ Gen.text (Range.linear 20 30) Gen.alphaNum
     a <- newAddress
-    lift $ writeOrFail (withKey (// Key m) a) ""
-    lift $ writeOrFail (withKey (// (Key s // Key m)) a) ""
+    lift $ Unsafe.write (withKey (// Key m) a) ""
+    lift $ Unsafe.write (withKey (// (Key s // Key m)) a) ""
     (p, k) <- lift $ listObjects a
     ([Just . Key $ s <> "/"], [Just $ Key m]) === (removeCommonPrefix a <$> p, removeCommonPrefix a <$> k)
 
@@ -480,7 +481,7 @@ prop_list_recursively :: Property
 prop_list_recursively =
   withTests 2 . property . liftAWS $ do
     a <- newAddress
-    lift $ writeOrFail a ""
+    lift $ Unsafe.write a ""
     r' <- lift $ listRecursively (a { key = dirname $ key a })
     assert $ a `elem` r'
 
@@ -498,7 +499,7 @@ prop_download =
     p <- newFilePath
     a <- newAddress
     let t = p </> localPath l
-    lift $ writeOrFail a d
+    lift $ Unsafe.write a d
     r <- lift . runExceptT $ download a t
     res <- liftIO $ T.readFile t
 
@@ -521,7 +522,7 @@ prop_download_multipart =
     liftIO $ withFile t WriteMode $ \h ->
       replicateM_ 1000 (LBS.hPut h (LBS.fromChunks . return $ (BS.concat . L.replicate 10000 $ bs)))
     sz <- liftIO . withFile t ReadMode $ hFileSize
-    lift $ uploadOrFail t a
+    lift $ Unsafe.upload t a
 
     let ten :: Integer = 10
 
@@ -544,9 +545,9 @@ prop_write_download_overwrite =
     p <- newFilePath
     a <- newAddress
     let t = p </> localPath l
-    lift $ writeOrFail a old
+    lift $ Unsafe.write a old
     x <- lift . runExceptT $ downloadWithMode Fail a t
-    lift $ writeWithModeOrFail Overwrite a new
+    lift $ Unsafe.writeWithMode Overwrite a new
     y <- lift . runExceptT $ downloadWithMode Overwrite a t
     r <- liftIO $ T.readFile t
 
@@ -564,9 +565,9 @@ prop_write_download_fail =
     p <- newFilePath
     a <- newAddress
     let t = p </> localPath l
-    lift $ writeOrFail a old
+    lift $ Unsafe.write a old
     x <- lift . runExceptT $ downloadWithMode Fail a t
-    lift $ writeWithModeOrFail Overwrite a new
+    lift $ Unsafe.writeWithMode Overwrite a new
     y <- lift . runExceptT $ downloadWithMode Fail a t
 
     assert $ isRight x
@@ -577,7 +578,7 @@ prop_delete =
   withTests 2 . property . liftAWS $ do
     w <- forAll Gen.genWriteMode
     a <- newAddress
-    lift $ writeWithModeOrFail w a ""
+    lift $ Unsafe.writeWithMode w a ""
     x <- lift $ exists a
     lift $ delete a
     y <- lift $ exists a
@@ -596,7 +597,7 @@ prop_read_write =
   withTests 2 . property . liftAWS $ do
     d <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
     a <- newAddress
-    lift $ writeOrFail a d
+    lift $ Unsafe.write a d
     r <- lift $ read a
     r === Just d
 
@@ -605,7 +606,7 @@ prop_write_failure =
   withTests 2 . property . liftAWS $ do
     d <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
     a <- newAddress
-    lift $ writeOrFail a d
+    lift $ Unsafe.write a d
     r <- lift $ write a d
     r === WriteDestinationExists a
 
@@ -622,8 +623,8 @@ prop_write_overwrite =
         annotate "Invariant generator." >> failure
 
     a <- newAddress
-    lift $ writeWithModeOrFail Fail a x
-    lift $ writeWithModeOrFail Overwrite a y
+    lift $ Unsafe.writeWithMode Fail a x
+    lift $ Unsafe.writeWithMode Overwrite a y
     r <- lift $ read a
     r === Just y
 
@@ -669,7 +670,7 @@ prop_write_nonexisting =
     w <- forAll Gen.genWriteMode
     d <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
     a <- newAddress
-    lift $ writeWithModeOrFail w a d
+    lift $ Unsafe.writeWithMode w a d
     r <- lift $ read a
     r === Just d
 
@@ -678,7 +679,7 @@ prop_write_grant =
   withTests 2 . property . liftAWS $ do
     t <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
     a <- newAddress
-    lift $ writeOrFail a t
+    lift $ Unsafe.write a t
     lift . grantReadAccess a $ ReadGrant "id=e3abd0cceaecbd471c3eaaa47bb722bf199296c5e41c9ee4222877cc91b536fc"
     r <- lift $ read a
     r === Just t
@@ -700,9 +701,9 @@ prop_download_recursive =
     tmpdir <- newFilePath
     addr <- withKey (// Key "top") <$> newAddress
     lift $ do
-      writeOrFail (withKey (// Key "a") addr) name1
-      writeOrFail (withKey (// Key "b/c") addr) name2
-      writeOrFail (withKey (// Key "c/d/e") addr) name3
+      Unsafe.write (withKey (// Key "a") addr) name1
+      Unsafe.write (withKey (// Key "b/c") addr) name2
+      Unsafe.write (withKey (// Key "c/d/e") addr) name3
 
     lift $ either (fail . show) pure =<< runExceptT (downloadRecursive addr tmpdir)
 
