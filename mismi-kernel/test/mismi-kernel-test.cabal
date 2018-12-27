@@ -1,4 +1,4 @@
-version: 0.0.2
+version: 0.0.3
 
 name:
   mismi-kernel-test
@@ -11,8 +11,8 @@ build-type:
 library
   build-depends:
       base                            >= 3          && < 5
-    , mismi-kernel                    == 0.0.2.*
-    , mismi-p                         == 0.0.2.*
+    , mismi-kernel                    == 0.0.3.*
+    , mismi-p                         == 0.0.3.*
     , hedgehog
     , text                            >= 1.1        && < 1.3
 
