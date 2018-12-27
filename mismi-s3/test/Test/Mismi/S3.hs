@@ -13,6 +13,7 @@ module Test.Mismi.S3 (
   , createSmallFiles
   , files
   , newAddress
+  , newAddressAWS
   , newFilePath
   , addCleanupFinalizer
   , addPrintFinalizer
@@ -94,14 +95,18 @@ files prefix name n =
   fmap (\i -> withKey (// Key (name <> "-" <> (T.pack $ show i))) prefix) [1..n]
 
 newAddress :: PropertyT AWS Address
-newAddress = do
+newAddress =
+  lift newAddressAWS
+
+newAddressAWS :: AWS Address
+newAddressAWS = do
   a <- liftIO $ do
     t <- Gen.sample genToken
     b <- testBucket
     u <- T.pack . U.toString <$> U.nextRandom
     pure $ Address b (Key . T.intercalate "/" $ ["mismi", u, unToken t])
-  lift $ addCleanupFinalizer a
-  lift $ addPrintFinalizer a
+  addCleanupFinalizer a
+  addPrintFinalizer a
   pure $ a
 
 newFilePath :: PropertyT AWS FilePath

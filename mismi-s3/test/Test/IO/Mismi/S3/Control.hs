@@ -14,14 +14,13 @@ import qualified Mismi.S3.Unsafe as Unsafe
 import           P
 
 import           Test.Mismi (liftAWS, runAWSDefaultRegion)
-import           Test.Mismi.S3 (newAddress)
+import           Test.Mismi.S3 (newAddressAWS)
 
 prop_finalizer :: Property
 prop_finalizer =
-  withTests 10 . property . liftAWS $ do
-    a <- newAddress
-
+  withTests 2 . property . liftAWS $ do
     r <- liftIO . runAWSDefaultRegion $ do
+      a <- newAddressAWS
       Unsafe.write a ""
       pure $ a
 
