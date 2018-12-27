@@ -5,51 +5,80 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Mismi.S3.Commands (
+  -- * Operations
+  -- ** Existence
     headObject
   , exists
   , existsPrefix
+
+  -- ** Size
   , getSize
   , size
   , sizeRecursively
+
+  -- ** Delete
   , delete
-  , read
+
+  -- ** Copy
   , concatMultipart
   , copy
   , copyWithMode
   , copyMultipart
+  -- *** Recursive copy
+  , sync
+  , syncWithMode
+
+
+  -- ** Move
   , move
+
+  -- ** Upload
   , upload
   , uploadWithMode
   , uploadRecursive
   , uploadRecursiveWithMode
   , multipartUpload
   , uploadSingle
+
+  -- ** Write
   , write
   , writeWithMode
+
+  -- ** Read
+  , read
   , getObjects
   , getObjectsRecursively
+
+  -- ** List
   , listObjects
   , list
+  , listRecursively
+
+  -- ** Download
   , download
   , downloadWithMode
   , downloadSingle
   , downloadWithRange
+  , multipartDownload
   , downloadRecursive
   , downloadRecursiveWithMode
-  , multipartDownload
+
+  -- ** Multipart
+  , createMultipartUpload
   , listMultipartParts
   , listMultiparts
   , listOldMultiparts
   , listOldMultiparts'
   , abortMultipart
   , abortMultipart'
+  -- *** Filter
   , filterOld
   , filterNDays
-  , listRecursively
-  , sync
-  , syncWithMode
-  , createMultipartUpload
+
+  -- ** Grant ACL
   , grantReadAccess
+
+  -- * Utility
   , chunkFilesBySize
   ) where
 
@@ -158,19 +187,6 @@ sizeRecursively prefix =
 delete :: Address -> AWS ()
 delete =
   void . send . f' A.deleteObject
-
--- | Retrieve the object at 'Address'. Handles any 404 response by converting to Maybe.
-getObject' :: Address -> AWS (Maybe GetObjectResponse)
-getObject' =
-  handle404 . send . f' A.getObject
-
--- | Read contents of 'Address'.
---
-read :: Address -> AWS (Maybe Text)
-read a = withRetries 5 $ do
-  r <- Stream.read a
-  z <- liftIO . sequence $ (\x -> runResourceT . runConduit $ x .| Conduit.sinkLbs) <$> r
-  pure $ fmap (T.concat . TL.toChunks . TL.decodeUtf8) z
 
 concatMultipart :: WriteMode -> Int -> [Address] -> Address -> ExceptT ConcatError AWS ()
 concatMultipart mode fork inputs dest = do
@@ -318,10 +334,27 @@ multipartCopyWorker e mpu dest (source, o, c, i) = do
         m <- fromMaybeM (throwM . Invariant $ "cprETag") $ pr ^. A.cprETag
         pure $! Right $! PartResponse i m
 
-createMultipartUpload :: Address -> AWS Text
-createMultipartUpload a = do
-  mpu <- send $ f' A.createMultipartUpload a & A.cmuServerSideEncryption .~ Just sse
-  maybe (throwM . Invariant $ "MultipartUpload: missing 'UploadId'") pure (mpu ^. A.cmursUploadId)
+sync :: Address -> Address -> Int -> ExceptT SyncError AWS ()
+sync =
+  syncWithMode FailSync
+
+syncWithMode :: SyncMode -> Address -> Address -> Int -> ExceptT SyncError AWS ()
+syncWithMode mode source dest fork = do
+  e <- ask
+  void . firstT SyncError . ExceptT . liftIO $
+    (consume (sinkQueue e (Stream.listRecursively source)) fork (syncWorker source dest mode e))
+
+syncWorker :: Address -> Address -> SyncMode -> Env -> Address -> IO (Either SyncWorkerError ())
+syncWorker input output mode env f = runExceptT . runAWST env SyncAws $ do
+  n <- maybe (throwE $ SyncInvariant input f) pure $ removeCommonPrefix input f
+  let out = withKey (// n) output
+      liftCopy = firstT SyncCopyError
+      cp = liftCopy $ copy f out
+  foldSyncMode
+    (ifM (lift $ exists out) (throwE $ OutputExists out) cp)
+    (liftCopy $ copyWithMode Overwrite f out)
+    (ifM (lift $ exists out) (pure ()) cp)
+    mode
 
 move :: Address -> Address -> ExceptT CopyError AWS ()
 move source destination' =
@@ -442,9 +475,9 @@ uploadRecursiveWithMode mode src (Address buck ky) fork = do
     uploadAddress fp =
       Address buck (ky // Key (T.pack $ L.drop prefixLen fp))
 
--- Take a list of files and their sizes, and convert it to a list of tests
--- where the total size of the files in the sub list is less than `maxSize`
--- and the length of the sub lists is <= `maxCount`.
+-- | Take a list of files and their sizes, and convert it to a list of tests
+--   where the total size of the files in the sub list is less than `maxSize`
+--   and the length of the sub lists is <= `maxCount`.
 chunkFilesBySize :: Int -> Int64 -> [(FilePath, Int64)] -> [[(FilePath, Int64)]]
 chunkFilesBySize maxCount maxSize =
   takeFiles 0 [] . L.sortOn snd
@@ -505,6 +538,19 @@ writeWithMode w a t = do
 
   either pure (const $ pure WriteOk) result
 
+-- | Retrieve the object at 'Address'. Handles any 404 response by converting to Maybe.
+getObject' :: Address -> AWS (Maybe GetObjectResponse)
+getObject' =
+  handle404 . send . f' A.getObject
+
+-- | Read contents of 'Address'.
+--
+read :: Address -> AWS (Maybe Text)
+read a = withRetries 5 $ do
+  r <- Stream.read a
+  z <- liftIO . sequence $ (\x -> runResourceT . runConduit $ x .| Conduit.sinkLbs) <$> r
+  pure $ fmap (T.concat . TL.toChunks . TL.decodeUtf8) z
+
 -- pair of prefixs and keys
 getObjects :: Address -> AWS ([Key], [Key])
 getObjects (Address (Bucket buck) (Key ky)) =
@@ -549,6 +595,10 @@ listObjects a =
 list :: Address -> AWS [Address]
 list a =
   runConduit $ Stream.list a .| DC.consume
+
+listRecursively :: Address -> AWS [Address]
+listRecursively a =
+  runConduit $ Stream.listRecursively a .| DC.consume
 
 download :: Address -> FilePath -> ExceptT DownloadError AWS ()
 download =
@@ -636,6 +686,11 @@ downloadRecursive :: Address -> FilePath -> ExceptT DownloadError AWS ()
 downloadRecursive =
   downloadRecursiveWithMode Fail
 
+createMultipartUpload :: Address -> AWS Text
+createMultipartUpload a = do
+  mpu <- send $ f' A.createMultipartUpload a & A.cmuServerSideEncryption .~ Just sse
+  maybe (throwM . Invariant $ "MultipartUpload: missing 'UploadId'") pure (mpu ^. A.cmursUploadId)
+
 listMultipartParts :: Address -> Text -> AWS [Part]
 listMultipartParts a uploadId = do
   let req = f' A.listParts a uploadId
@@ -658,6 +713,8 @@ listOldMultiparts' b i = do
   now <- liftIO getCurrentTime
   pure $ filter (filterNDays i now) mus
 
+-- | Filter parts older than 7 days.
+--
 filterOld :: UTCTime -> MultipartUpload -> Bool
 filterOld = filterNDays 7
 
@@ -683,42 +740,13 @@ abortMultipart' :: Address -> Text -> AWS ()
 abortMultipart' a i =
   void . send $ f' A.abortMultipartUpload a i
 
-listRecursively :: Address -> AWS [Address]
-listRecursively a =
-  runConduit $ Stream.listRecursively a .| DC.consume
-
 grantReadAccess :: Address -> ReadGrant -> AWS ()
 grantReadAccess a g =
   void . send $ (f' P.putObjectACL a & P.poaGrantRead .~ Just (readGrant g))
 
-sync :: Address -> Address -> Int -> ExceptT SyncError AWS ()
-sync =
-  syncWithMode FailSync
-
-syncWithMode :: SyncMode -> Address -> Address -> Int -> ExceptT SyncError AWS ()
-syncWithMode mode source dest fork = do
-  e <- ask
-  void . firstT SyncError . ExceptT . liftIO $
-    (consume (sinkQueue e (Stream.listRecursively source)) fork (worker source dest mode e))
-
-worker :: Address -> Address -> SyncMode -> Env -> Address -> IO (Either SyncWorkerError ())
-worker input output mode env f = runExceptT . runAWST env SyncAws $ do
-  n <- maybe (throwE $ SyncInvariant input f) pure $ removeCommonPrefix input f
-  let out = withKey (// n) output
-      liftCopy = firstT SyncCopyError
-      cp = liftCopy $ copy f out
-  foldSyncMode
-    (ifM (lift $ exists out) (throwE $ OutputExists out) cp)
-    (liftCopy $ copyWithMode Overwrite f out)
-    (ifM (lift $ exists out) (pure ()) cp)
-    mode
-
 tryIO :: MonadIO m => IO a -> m (Either IOError a)
-tryIO = liftIO . CE.try
-
-
-
--- compat
+tryIO =
+  liftIO . CE.try
 
 ifM :: Monad m => m Bool -> m a -> m a -> m a
 ifM p x y =
