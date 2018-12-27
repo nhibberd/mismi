@@ -27,7 +27,6 @@ import           Data.UUID (toString)
 import           Data.UUID.V4 (nextRandom)
 
 import           P
-import           Prelude (Double) -- TODO lift to mismi-p
 import           Prelude (ceiling, (/))
 
 import           Mismi (AWS, rawRunAWS)

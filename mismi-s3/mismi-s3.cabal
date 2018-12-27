@@ -91,6 +91,7 @@ library
     Mismi.S3.Patch.Network
     Mismi.S3.Patch.PutObjectACL
     Mismi.S3.Data
+    Mismi.S3.Unsafe
 
     Mismi.S3.Internal
     Mismi.S3.Internal.Async

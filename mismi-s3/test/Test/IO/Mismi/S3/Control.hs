@@ -9,6 +9,7 @@ import           Control.Monad.Trans.Class (lift)
 import           Hedgehog
 
 import           Mismi.S3.Commands
+import qualified Mismi.S3.Unsafe as Unsafe
 
 import           P
 
@@ -21,7 +22,7 @@ prop_finalizer =
     a <- newAddress
 
     r <- liftIO . runAWSDefaultRegion $ do
-      writeOrFail a ""
+      Unsafe.write a ""
       pure $ a
 
     e <- lift $ exists r

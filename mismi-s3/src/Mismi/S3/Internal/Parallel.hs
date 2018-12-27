@@ -33,14 +33,12 @@ import           Control.Concurrent.Async (waitBoth, wait, waitEither)
 import           Control.Concurrent.MSem (new, signal)
 import qualified Control.Concurrent.MSem as M
 import           Control.Concurrent.MVar (MVar, newMVar, readMVar, modifyMVar, modifyMVar_)
-import           Control.Monad (forever) -- TODO lift to mismi-p
 import           Control.Monad.Catch (Exception, SomeException, catch, catchAll, finally, throwM)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Loops (untilM_)
 import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import           Control.Monad.Trans.Bifunctor (firstT)
 
-import           Data.Maybe (isJust) -- TODO lift to mismi-p
 import qualified Data.Text as T
 import           Data.Typeable (Typeable)
 

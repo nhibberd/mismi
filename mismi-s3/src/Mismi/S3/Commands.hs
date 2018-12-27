@@ -19,33 +19,23 @@ module Mismi.S3.Commands (
   , copyMultipart
   , move
   , upload
-  , uploadOrFail
   , uploadWithMode
-  , uploadWithModeOrFail
   , uploadRecursive
-  , uploadRecursiveOrFail
   , uploadRecursiveWithMode
-  , uploadRecursiveWithModeOrFail
   , multipartUpload
   , uploadSingle
   , write
-  , writeOrFail
   , writeWithMode
-  , writeWithModeOrFail
   , getObjects
   , getObjectsRecursively
   , listObjects
   , list
   , download
-  , downloadOrFail
   , downloadWithMode
-  , downloadWithModeOrFail
   , downloadSingle
   , downloadWithRange
   , downloadRecursive
-  , downloadRecursiveOrFail
   , downloadRecursiveWithMode
-  , downloadRecursiveWithModeOrFail
   , multipartDownload
   , listMultipartParts
   , listMultiparts
@@ -60,8 +50,6 @@ module Mismi.S3.Commands (
   , syncWithMode
   , createMultipartUpload
   , grantReadAccess
-  , hoistUploadError
-  , hoistDownloadError
   , chunkFilesBySize
   ) where
 
@@ -74,8 +62,8 @@ import           Control.Monad.Extra (concatMapM)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Reader (ask)
 import           Control.Monad.Trans.Class (lift)
-import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.Bifunctor
+import           Control.Monad.Trans.Except (ExceptT (..), runExceptT, throwE)
+import           Control.Monad.Trans.Bifunctor (firstT)
 import           Control.Monad.Trans.Resource (allocate, runResourceT)
 import qualified Control.Retry as Retry
 
@@ -103,7 +91,7 @@ import qualified Mismi.S3.Patch.Network as N
 import qualified Mismi.S3.Patch.PutObjectACL as P
 import qualified Mismi.S3.Internal.Binary as XB
 import           Mismi.S3.Internal.Queue (writeQueue)
-import           Mismi.S3.Internal.Parallel (RunError (..), consume)
+import           Mismi.S3.Internal.Parallel (consume)
 import qualified Mismi.S3.Stream as Stream
 
 import           Network.AWS.Data.Body (ChunkedBody (..), ChunkSize (..))
@@ -348,36 +336,6 @@ uploadRecursive :: FilePath -> Address -> Int -> ExceptT UploadError AWS ()
 uploadRecursive =
   uploadRecursiveWithMode Fail
 
-uploadRecursiveOrFail :: FilePath -> Address -> Int -> AWS ()
-uploadRecursiveOrFail f a i =
-  either hoistUploadError pure =<< runExceptT (uploadRecursive f a i)
-
-uploadOrFail :: FilePath -> Address -> AWS ()
-uploadOrFail f a =
-  either hoistUploadError pure =<< runExceptT (upload f a)
-
-uploadWithModeOrFail :: WriteMode -> FilePath -> Address -> AWS ()
-uploadWithModeOrFail w f a =
-  either hoistUploadError pure =<< runExceptT (uploadWithMode w f a)
-
-uploadRecursiveWithModeOrFail :: WriteMode -> FilePath -> Address -> Int -> AWS ()
-uploadRecursiveWithModeOrFail w f a i =
-  either hoistUploadError pure =<< runExceptT (uploadRecursiveWithMode w f a i)
-
-hoistUploadError :: UploadError -> AWS ()
-hoistUploadError e =
-  case e of
-    UploadSourceMissing f ->
-      throwM $ SourceFileMissing f
-    UploadDestinationExists a ->
-      throwM $ DestinationAlreadyExists a
-    UploadSourceNotDirectory f ->
-      throwM $ SourceNotDirectory f
-    MultipartUploadError (WorkerError a) ->
-      throwM $ a
-    MultipartUploadError (BlowUpError a) ->
-      throwM $ a
-
 uploadWithMode :: WriteMode -> FilePath -> Address -> ExceptT UploadError AWS ()
 uploadWithMode m f a = do
   when (m == Fail) . whenM (lift $ exists a) . throwE $ UploadDestinationExists a
@@ -532,21 +490,6 @@ write :: Address -> Text -> AWS WriteResult
 write =
   writeWithMode Fail
 
-writeOrFail :: Address -> Text -> AWS ()
-writeOrFail a t =
-  write a t >>= liftWriteResult
-
-writeWithModeOrFail :: WriteMode -> Address -> Text -> AWS ()
-writeWithModeOrFail m a t =
-  writeWithMode m a t >>= liftWriteResult
-
-liftWriteResult :: WriteResult -> AWS ()
-liftWriteResult = \case
-  WriteOk ->
-    pure ()
-  WriteDestinationExists a ->
-    throwM $ DestinationAlreadyExists a
-
 writeWithMode :: WriteMode -> Address -> Text -> AWS WriteResult
 writeWithMode w a t = do
   result <- runExceptT $ do
@@ -607,29 +550,9 @@ list :: Address -> AWS [Address]
 list a =
   runConduit $ Stream.list a .| DC.consume
 
-hoistDownloadError :: DownloadError -> AWS ()
-hoistDownloadError e =
-  case e of
-    DownloadSourceMissing a ->
-      throwM $ SourceMissing DownloadError a
-    DownloadDestinationExists f ->
-      throwM $ DestinationFileExists f
-    DownloadDestinationNotDirectory f ->
-      throwM $ DestinationNotDirectory f
-    DownloadInvariant a b ->
-      throwM $ Invariant (renderDownloadError $ DownloadInvariant a b)
-    MultipartError (WorkerError a) ->
-      throwM a
-    MultipartError (BlowUpError a) ->
-      throwM a
-
 download :: Address -> FilePath -> ExceptT DownloadError AWS ()
 download =
   downloadWithMode Fail
-
-downloadOrFail :: Address -> FilePath -> AWS ()
-downloadOrFail a f =
-  either hoistDownloadError pure =<< runExceptT (download a f)
 
 downloadWithMode :: WriteMode -> Address -> FilePath -> ExceptT DownloadError AWS ()
 downloadWithMode mode a f = do
@@ -648,10 +571,6 @@ downloadWithMode mode a f = do
          -- threads.
          multipartDownload a f sz 100 5
     else downloadSingle a f
-
-downloadWithModeOrFail :: WriteMode -> Address -> FilePath -> AWS ()
-downloadWithModeOrFail m a f =
-  either hoistDownloadError pure =<< runExceptT (downloadWithMode m a f)
 
 downloadSingle :: Address -> FilePath -> ExceptT DownloadError AWS ()
 downloadSingle a f = do
@@ -716,14 +635,6 @@ downloadRecursiveWithMode mode src dest = do
 downloadRecursive :: Address -> FilePath -> ExceptT DownloadError AWS ()
 downloadRecursive =
   downloadRecursiveWithMode Fail
-
-downloadRecursiveOrFail :: Address -> FilePath -> AWS ()
-downloadRecursiveOrFail a f =
-  either hoistDownloadError pure =<< runExceptT (downloadRecursive a f)
-
-downloadRecursiveWithModeOrFail :: WriteMode -> Address -> FilePath -> AWS ()
-downloadRecursiveWithModeOrFail m a f =
-  either hoistDownloadError pure =<< runExceptT (downloadRecursiveWithMode m a f)
 
 listMultipartParts :: Address -> Text -> AWS [Part]
 listMultipartParts a uploadId = do
