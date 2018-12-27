@@ -25,9 +25,11 @@ as is, with minimal change. Future work will look at removing a lot of
 the technical debt that has accumlated over the years will most like
 result in a major version change.
 
-- [mismi-p](https://hackage.haskell.org/package/mismi-p-0.0.1)
-- [mismi-kernel](https://hackage.haskell.org/package/mismi-kernel-0.0.1)
-- [mismi-core](https://hackage.haskell.org/package/mismi-core-0.0.1)
+- [mismi-p](https://hackage.haskell.org/package/mismi-p)
+- [mismi-kernel](https://hackage.haskell.org/package/mismi-kernel)
+- [mismi-core](https://hackage.haskell.org/package/mismi-core)
+- [mismi-s3-core](https://hackage.haskell.org/package/mismi-s3-core)
+- [mismi-s3](https://hackage.haskell.org/package/mismi-s3-core)
 
 
 ## AWS Testing
