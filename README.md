@@ -29,7 +29,7 @@ result in a major version change.
 - [mismi-kernel](https://hackage.haskell.org/package/mismi-kernel)
 - [mismi-core](https://hackage.haskell.org/package/mismi-core)
 - [mismi-s3-core](https://hackage.haskell.org/package/mismi-s3-core)
-- [mismi-s3](https://hackage.haskell.org/package/mismi-s3-core)
+- [mismi-s3](https://hackage.haskell.org/package/mismi-s3)
 
 
 ## AWS Testing
