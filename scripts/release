@@ -1,0 +1,21 @@
+#!/bin/sh -eux
+
+SERVICES="mismi-p \
+  mismi-kernel \
+  mismi-core \
+  mismi-s3-core \
+  mismi-s3"
+
+for SERVICE in ${SERVICES} ; do
+   stack build --fast "${SERVICE}"
+done
+
+for SERVICE in ${SERVICES}; do
+   stack sdist "${SERVICE}"
+   stack upload
+done
+
+
+# TODO docuemntation
+# ref https://github.com/brendanhay/amazonka/blob/develop/script/hackage-documentation
+# stack haddock --fast "${SERVICE}"
