@@ -11,6 +11,7 @@ import           Criterion.Main
 import qualified Data.Text as T
 
 import           Mismi.S3
+import qualified Mismi.S3.Unsafe as Unsafe
 
 import           P
 
@@ -24,14 +25,14 @@ import qualified Test.Mismi.S3 as S3
 
 createFiles :: Address -> Int -> AWS ()
 createFiles prefix n = do
-  mapM_ (flip (writeWithModeOrFail Overwrite) "data") $ files prefix n
+  mapM_ (flip (Unsafe.writeWithMode Overwrite) "data") $ files prefix n
 
 createLargeFiles :: Address -> Int -> AWS ()
 createLargeFiles prefix n = do
   withSystemTempFile "file" $ \f h -> do
     liftIO $ hSetFileSize h (100 * 1024 * 1024 :: Integer) {-- 100 mb --}
     liftIO $ hClose h
-    mapM_ (uploadWithModeOrFail Overwrite f) $ files prefix n
+    mapM_ (Unsafe.uploadWithMode Overwrite f) $ files prefix n
 
 files :: Address -> Int -> [Address]
 files prefix n =

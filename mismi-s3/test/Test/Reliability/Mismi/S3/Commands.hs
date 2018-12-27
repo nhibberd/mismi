@@ -19,6 +19,7 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import           Mismi.S3
+import qualified Mismi.S3.Unsafe as Unsafe
 
 import           P
 
@@ -68,7 +69,7 @@ prop_upload_single =
     l <- forAll $ genLocalPath
     let f = p </> localPath l
     liftIO $ T.writeFile f "data"
-    lift . mapM_ (uploadOrFail f) $ files a m i
+    lift . mapM_ (Unsafe.upload f) $ files a m i
 
 
 tests :: IO Bool
