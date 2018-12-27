@@ -35,6 +35,8 @@ module Mismi.Control (
   , withRetriesOf
   , throwOrRetry
   , throwOrRetryOf
+  -- * Timeout
+  , timeoutAWS
   ) where
 
 import           Control.Exception (IOException)
@@ -66,6 +68,8 @@ import           Network.HTTP.Types.Status (Status (..))
 import qualified Network.HTTP.Types as HTTP
 
 import           P
+
+import qualified System.Timeout as System
 
 runAWST :: Env -> (Error -> e) -> ExceptT e AWS a -> ExceptT e IO a
 runAWST e err action =
@@ -353,3 +357,9 @@ handleServiceError f pass action =
         throwM e
       TransportError _ ->
         throwM e
+
+
+timeoutAWS :: Int -> AWS a -> AWS (Maybe a)
+timeoutAWS i r = do
+  e <- ask
+  liftIO $ System.timeout i (unsafeRunAWS e r)

@@ -83,6 +83,7 @@ module Mismi.S3.Commands (
   ) where
 
 import           Control.Arrow ((***))
+import           Control.Concurrent.Async (mapConcurrently_)
 import           Control.Exception (ioError)
 import qualified Control.Exception as CE
 import           Control.Lens ((.~), (^.), to, view)
@@ -146,8 +147,6 @@ import           System.Posix.IO (OpenMode(..), openFd, closeFd, fdSeek, default
 import           System.Posix.Files (fileSize, getFileStatus, isDirectory, isRegularFile)
 import qualified "unix-bytestring" System.Posix.IO.ByteString as UBS
 
-import qualified UnliftIO.Async as UnliftIO
-import qualified UnliftIO.Timeout as UnliftIO
 import           System.IO.Error (userError)
 
 -- | Retrieves the 'HeadObjectResponse'. Handles any 404 response by converting to Maybe.
@@ -465,8 +464,9 @@ uploadRecursiveWithMode mode src (Address buck ky) fork = do
     uploadFiles [(f,s)]
       | fromIntegral s < bigChunkSize = lift . uploadSingle f $ uploadAddress f
       | otherwise = uploadWithMode mode f $ uploadAddress f
-    uploadFiles xs =
-      lift $ UnliftIO.mapConcurrently_ (\ (f, _) -> uploadSingle f $ uploadAddress f) xs
+    uploadFiles xs = do
+      e <- ask
+      liftIO $ mapConcurrently_ (\ (f, _) -> unsafeRunAWS e . uploadSingle f $ uploadAddress f) xs
 
 
     prefixLen = L.length (src </> "a") - 1
@@ -646,7 +646,7 @@ downloadWithRange :: Address -> Int -> Int -> FilePath -> AWS ()
 downloadWithRange a start end dest = withRetries 5 $ do
   -- Use a timeout of ten minutes. Arrivied at empirically. With a timeout of 5
   -- minutes this was triggering too often. Want this to be the last resort.
-  res <- UnliftIO.timeout (10 * 60 * 1000 * 1000) $ do
+  res <- timeoutAWS (10 * 60 * 1000 * 1000) $ do
     r <- send $ f' A.getObject a &
       A.goRange .~ (Just $ bytesRange start end)
 
