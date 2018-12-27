@@ -1,8 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE TemplateHaskell   #-}
-import           Control.Monad.IO.Class (liftIO)
+
 import           Control.Monad.Catch
+import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.Trans.Except (ExceptT, runExceptT, mapExceptT)
 
 import           Criterion.Main
 
@@ -18,9 +20,7 @@ import           System.IO.Temp
 
 import           Test.Mismi
 
-import           Test.QuickCheck.Instances ()
-
-import           X.Control.Monad.Trans.Either (EitherT, eitherT, mapEitherT)
+import qualified Test.Mismi.S3 as S3
 
 createFiles :: Address -> Int -> AWS ()
 createFiles prefix n = do
@@ -41,17 +41,18 @@ run :: AWS a -> IO a
 run =
   runAWSDefaultRegion
 
-runE :: EitherT SyncError AWS a -> IO a
-runE =
-  eitherT (throwM . userError . T.unpack . renderSyncError) pure . mapEitherT runAWSDefaultRegion
+runE :: ExceptT SyncError AWS a -> IO a
+runE t =
+  either (throwM . userError . T.unpack . renderSyncError) pure =<< runExceptT (mapExceptT runAWSDefaultRegion t)
 
 main :: IO ()
 main = do
-  let a = Address (Bucket "ambiata-dev-view") (Key "s3-benchmarks/small-foo")
-      b = Address (Bucket "ambiata-dev-view") (Key "s3-benchmarks/small-bar")
-      c = Address (Bucket "ambiata-dev-view") (Key "s3-benchmarks/large-foo")
-      d = Address (Bucket "ambiata-dev-view") (Key "s3-benchmarks/large-bar")
-      o = Address (Bucket "ambiata-dev-view") (Key "s3-benchmarks/output")
+  buck <- S3.testBucket
+  let a = Address buck (Key "s3-benchmarks/small-foo")
+      b = Address buck (Key "s3-benchmarks/small-bar")
+      c = Address buck (Key "s3-benchmarks/large-foo")
+      d = Address buck (Key "s3-benchmarks/large-bar")
+      o = Address buck (Key "s3-benchmarks/output")
   run $ do
     createFiles a 100
     createFiles b 1000
