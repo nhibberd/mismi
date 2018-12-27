@@ -13,7 +13,8 @@ bug-reports:
 synopsis:
   AWS Library
 description:
-  mismi-s3
+  mismi-s3 is a library that provides a set of common and useful
+  operations on top of AWS S3.
 category:
   AWS
 license:
