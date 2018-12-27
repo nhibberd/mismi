@@ -1,10 +1,20 @@
-import           Disorder.Core.Main
+import           Control.Monad (unless)
+
+import           System.Exit (exitFailure)
+import           System.IO (BufferMode(..), hSetBuffering, stdout, stderr)
 
 import qualified Test.Reliability.Mismi.S3.Commands
 
+import qualified Test.Mismi as Mismi
 
 main :: IO ()
-main =
-  disorderMain [
+main = do
+  hSetBuffering stdout LineBuffering
+  hSetBuffering stderr LineBuffering
+
+  results <- sequence =<< Mismi.enableTests "AWS_TEST_S3" [] [
       Test.Reliability.Mismi.S3.Commands.tests
     ]
+
+
+  unless (and results) exitFailure

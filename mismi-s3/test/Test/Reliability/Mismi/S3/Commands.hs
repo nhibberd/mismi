@@ -2,58 +2,75 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 module Test.Reliability.Mismi.S3.Commands where
 
-import           Control.Monad.Catch
-import           Control.Monad.IO.Class
+import           Control.Monad (replicateM_)
+import           Control.Monad.Catch (throwM)
+import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Except (runExceptT)
 
-import qualified Data.Text as T
+import           Data.Either (isRight)
 import qualified Data.Text.IO as T
 
-import           Disorder.Corpus
+import           Hedgehog
+import           Hedgehog.Internal.Property (TestLimit (..))
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
 import           Mismi.S3
 
 import           P
 
-import qualified System.Directory as D
-import           System.FilePath (combine)
-import           System.IO
-import           System.IO.Error
-import           System.IO.Temp
+import           System.FilePath ((</>))
+import           System.IO.Error (userError)
+import qualified System.IO.Unsafe as Unsafe
 
 import           Test.Mismi.S3
-import           Test.Reliability.Reliability
-import           Test.QuickCheck
-import           Test.QuickCheck.Instances ()
+import qualified Test.Reliability.Reliability as Reliability
 
-import           X.Control.Monad.Trans.Either (runEitherT)
+testSize :: TestLimit
+testSize =
+  TestLimit $
+    Unsafe.unsafePerformIO Reliability.getMaxSuccess
 
-prop_sync = forAll (elements muppets) $ \m -> testAWS' $ \a b i -> do
-  createSmallFiles a m i
-  r <- runEitherT $ syncWithMode OverwriteSync a b 10
-  mapM_ (\e -> exists e >>= \e' -> when (e' == False) (throwM $ userError "Output files do not exist")) (files a m i)
-  pure $ (isRight r) === True
+prop_sync :: Property
+prop_sync =
+  withTests testSize . property . liftAWS $ do
+    m <- forAll $ Gen.text (Range.linear 10 20) Gen.alphaNum
+    a <- newAddress
+    b <- newAddress
+    i <- Reliability.testSize
+    createSmallFiles a m i
+    r <- lift . runExceptT $ syncWithMode OverwriteSync a b 10
+    lift . forM_ (files a m i) $ \e ->
+      exists e >>= \e' ->
+        when (e' == False) (throwM $ userError "Output files do not exist")
+    assert $ isRight r
 
-prop_list = forAll (elements muppets) $ \m -> testS3 $ \a i -> do
-  createSmallFiles a m i
-  replicateM_ 100 (list a >>= \z -> when (length z /=  i) (throwM $ userError "List is not the same as original response"))
-  pure $ True === True
+prop_list :: Property
+prop_list =
+  withTests testSize . property . liftAWS $ do
+    m <- forAll $ Gen.text (Range.linear 10 20) Gen.alphaNum
+    a <- newAddress
+    i <- Reliability.testSize
+    createSmallFiles a m i
+    lift $ replicateM_ 100 (list a >>= \z -> when (length z /=  i) (throwM $ userError "List is not the same as original response"))
 
-prop_upload_single = forAll (elements muppets) $ \m -> testS3 $ \a i -> do
-  withSystemTempDirectory "mismi" $ \p -> do
-    liftIO $ D.createDirectoryIfMissing True p
-    let f = combine p $ T.unpack m
+
+prop_upload_single :: Property
+prop_upload_single =
+  withTests testSize . property . liftAWS $ do
+    m <- forAll $ Gen.text (Range.linear 10 20) Gen.alphaNum
+    a <- newAddress
+    i <- Reliability.testSize
+    p <- newFilePath
+    l <- forAll $ genLocalPath
+    let f = p </> localPath l
     liftIO $ T.writeFile f "data"
-    mapM_ (uploadOrFail f) $ files a m i
-  pure $ True === True
+    lift . mapM_ (uploadOrFail f) $ files a m i
 
-return []
+
 tests :: IO Bool
 tests =
-  getMaxSuccess >>= testsN
-
-testsN :: Int -> IO Bool
-testsN n =
-  $forAllProperties $ quickCheckWithResult (stdArgs { maxSuccess = n })
+  checkSequential $$(discover)
