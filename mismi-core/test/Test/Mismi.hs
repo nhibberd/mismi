@@ -45,7 +45,7 @@ enableTests k false true = do
   d <- lookupEnv k
   pure $ bool false true $
     maybe
-      True
+      False
       (\s ->
         case s of
           "true" ->
@@ -57,5 +57,5 @@ enableTests k false true = do
           "0" ->
             False
           _ ->
-            True)
+            False)
       d

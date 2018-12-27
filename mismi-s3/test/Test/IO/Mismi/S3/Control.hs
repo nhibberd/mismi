@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Test.Mismi.S3.Control where
+module Test.IO.Mismi.S3.Control where
 
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Trans.Class (lift)
