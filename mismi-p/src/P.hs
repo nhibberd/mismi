@@ -132,7 +132,7 @@ module P (
   , traceIO
 
   -- * Text
-  , Text (..)
+  , Text
 
   -- * Prelude
   , Unsafe.Bounded
