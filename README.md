@@ -1,7 +1,5 @@
-mismi
+mismi [![Travis][travis-shield]][travis]
 =====
-
-[![Build Status](https://travis-ci.org/nhibberd/mismi.svg?branch=master)](https://travis-ci.org/nhibberd/mismi)
 
 <img src="http://upload.wikimedia.org/wikipedia/commons/a/a4/Nevado_Mismi.jpg" width="307" align="right"/>
 
@@ -24,6 +22,8 @@ The goal of the initial hackage release `0.0.1` was to provide mismi
 as is, with minimal change. Future work will look at removing a lot of
 the technical debt that has accumlated over the years will most like
 result in a major version change.
+
+[![Hackage][hackage-shield]][hackage-p]
 
 - [mismi-p](https://hackage.haskell.org/package/mismi-p)
 - [mismi-kernel](https://hackage.haskell.org/package/mismi-kernel)
@@ -78,3 +78,10 @@ runAWS r a = do
   e <- liftIO $ AWS.getEnv r Discover <&> envLogger .~ lgr
   runAWSWithEnv e a
 ```
+
+
+ [hackage-p]: http://hackage.haskell.org/package/mismi-p
+ [hackage-shield]: https://img.shields.io/badge/hackage-v0.0.3-blue.svg
+
+ [travis]: https://travis-ci.org/nhibberd/mismi
+ [travis-shield]: https://travis-ci.org/nhibberd/mismi.svg?branch=master
