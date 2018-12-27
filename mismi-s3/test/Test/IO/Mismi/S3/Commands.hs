@@ -3,27 +3,30 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE PackageImports #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 module Test.IO.Mismi.S3.Commands where
 
-import           Control.Concurrent
-import           Control.Monad.Catch
-import           Control.Monad.IO.Class
+import           Control.Concurrent (threadDelay)
+import           Control.Monad.Catch (catchAll, throwM)
+import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Except (runExceptT)
 
 import "cryptohash" Crypto.Hash
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Either (isRight, isLeft)
 import qualified Data.List as L
-import           Data.Text hiding (copy, length)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.IO as T
 
-import           Disorder.Core
-import           Disorder.Corpus
+import           Control.Lens ((^.), to)
+import           Control.Monad (replicateM_) -- TODO mismi-p
 
-import           Control.Lens hiding (elements)
+import           Hedgehog
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
 import           Mismi.S3
 import qualified Mismi.S3.Amazonka as A
@@ -33,93 +36,137 @@ import           P
 import qualified System.Directory as D
 import           System.FilePath ((</>))
 import qualified System.FilePath as F
-import           System.IO
-import           System.IO.Error
+import           System.IO (withFile, IOMode (..), hFileSize, putStrLn)
+import           System.IO.Error (userError)
 
-import           Test.Mismi.Amazonka
+import           Test.Mismi.Amazonka (sendMultipart, newMultipart)
 import           Test.Mismi.S3
-import           Test.QuickCheck
-import           Test.QuickCheck.Instances ()
+import qualified Test.Mismi.S3.Core.Gen as Gen
 
-import           Twine.Parallel (RunError (..))
+import           Mismi.S3.Internal.Parallel (RunError (..))
 
-import           X.Control.Monad.Trans.Either (runEitherT, eitherT)
+prop_exists :: Property
+prop_exists =
+  withTests 2 . property . liftAWS $ do
+    a <- newAddress
+    lift $ writeOrFail a ""
+    result <- lift $ exists a
+    result === True
 
-prop_exists = testAWS $ do
-  a <- newAddress
-  writeOrFail a ""
-  e <- exists a
-  pure $ e === True
+prop_exists_empty :: Property
+prop_exists_empty =
+  withTests 2 . property . liftAWS $ do
+    a <- newAddress
+    result <- lift $ exists a
+    result === False
 
-prop_exists_empty = testAWS $ do
-  a <- newAddress
-  not <$> exists a
+prop_exists_failure :: Property
+prop_exists_failure =
+  withTests 2 . property . liftAWS $ do
+    a <- newAddress
+    e <- lift $ exists a
+    e === False
 
-prop_exists_failure = testAWS $ do
-  a <- newAddress
-  e <- exists a
-  pure $ e === False
+prop_exists_prefix :: Property
+prop_exists_prefix =
+  withTests 2 . property . liftAWS $ do
+    k <- forAll $ Gen.genKey
+    a <- newAddress
+    lift $ writeOrFail (withKey (// k) a) ""
+    e <- lift $ existsPrefix a
+    e === True
 
-prop_exists_prefix k = k /= Key "" ==> testAWS $ do
-  a <- newAddress
-  writeOrFail (withKey (// k) a) ""
-  e <- existsPrefix a
-  pure $ e === True
+prop_exists_prefix_missing :: Property
+prop_exists_prefix_missing =
+  withTests 2 . property . liftAWS $ do
+    a <- newAddress
+    lift $ writeOrFail a ""
+    e <- lift $ existsPrefix a
+    e === False
 
-prop_exists_prefix_missing = testAWS $ do
-  a <- newAddress
-  writeOrFail a ""
-  e <- existsPrefix a
-  pure $ e === False
+prop_exists_prefix_key :: Property
+prop_exists_prefix_key =
+  withTests 2 . property . liftAWS $ do
+    a <- newAddress
+    e <- lift $ existsPrefix a
+    e === False
 
-prop_exists_prefix_key = testAWS $ do
-  a <- newAddress
-  e <- existsPrefix a
-  pure $ e === False
+prop_headObject :: Property
+prop_headObject =
+  withTests 2 . property . liftAWS $ do
+    a <- newAddress
+    h <- lift $ headObject a
+    h === Nothing
 
-prop_headObject = testAWS $ do
-  a <- newAddress
-  h <- headObject a
-  pure $ h === Nothing
+prop_getObjects_empty :: Property
+prop_getObjects_empty =
+  withTests 2 . property . liftAWS $ do
+    a <- newAddress
+    objs <- lift $ getObjectsRecursively $ a
+    objs === []
+
+prop_getObjectsR :: Property
+prop_getObjectsR = -- d p1 p2 = p1 /= p2 ==> testAWS $ do
+  withTests 2 . property . liftAWS $ do
+    d <- forAll $ Gen.text (Range.constant 5 15) Gen.alphaNum
+    items <- fmap toList . forAll $ Gen.set (Range.constant 2 2) Gen.genKey
+    (p1, p2) <- case items of
+      p1 : p2 : [] ->
+        pure (p1, p2)
+      _ ->
+        annotate "Invariant generator." >> failure
+
+    root <- newAddress
+    let
+      keys = [p1, p2 // p1, p2 // p2]
+    lift . forM_ keys $ \k ->
+      writeOrFail (withKey (// k) root) d
+    objs <- lift $ getObjectsRecursively root
+    on (===) L.sort ((^. A.oKey . to A.toText) <$> objs) (unKey . (//) (key root) <$> keys)
 
 
-prop_getObjects_empty = testAWS $ do
-  a <- newAddress
-  objs <- getObjectsRecursively $ a
-  pure $ objs === []
+-- TODO This is incredible slow
+prop_pagination_list :: Property
+prop_pagination_list =
+  -- TODO
+  withTests 0 . property . liftAWS $ do
+    m <- forAll $ Gen.text (Range.linear 10 15) Gen.alphaNum
+    n <- forAll $ Gen.int (Range.linear 1000 1500)
+    a <- newAddress
+    lift . forM_ [1..n] $ \n' ->
+      writeOrFail (withKey(// Key (m <> T.pack (show n'))) a) ""
+    r' <- lift $ list a
+    length r' === n
 
-prop_getObjectsR d p1 p2 = p1 /= p2 ==> testAWS $ do
-  root <- newAddress
-  let keys = [p1, p2 // p1, p2 // p2]
-  forM_ keys $ \k -> writeOrFail (withKey (// k) root) d
-  objs <- getObjectsRecursively root
-  pure $ on (===) L.sort ((^. A.oKey . to A.toText) <$> objs) (unKey . (//) (key root) <$> keys)
+prop_size :: Property
+prop_size =
+  withTests 10 . property . liftAWS $ do
+    d <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    a <- newAddress
+    lift $ writeOrFail a d
+    i <- lift $ size a
+    i === (Just . fromIntegral . BS.length $ T.encodeUtf8 d)
 
-prop_getObjs = forAll ((,) <$> elements muppets <*> choose (1000, 1500)) $ \(m, n) -> testAWS $ do
-  a <- newAddress
-  forM_ [1..n] $ \n' -> writeOrFail (withKey(// Key (m <> pack (show n'))) a) ""
-  r' <- list a
-  pure $ length r' === n
+prop_size_failure :: Property
+prop_size_failure =
+  withTests 2 . property . liftAWS $ do
+    a <- newAddress
+    i <- lift $ size a
+    i === Nothing
 
-prop_size d = testAWS $ do
-  a <- newAddress
-  writeOrFail a d
-  i <- size a
-  pure $ i === (Just . fromIntegral . BS.length $ T.encodeUtf8 d)
+prop_size_recursively :: Property
+prop_size_recursively =
+  withTests 2 . property . liftAWS $ do
+    d <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    a <- newAddress
+    lift $ writeOrFail a d
+    r <- lift $ sizeRecursively (a { key = dirname $ key a })
+    r === [Sized (fromIntegral . BS.length $ T.encodeUtf8 d) a]
 
-prop_size_failure = testAWS $ do
-  a <- newAddress
-  i <- size a
-  pure $ i === Nothing
-
-prop_size_recursively d = testAWS $ do
-  a <- newAddress
-  writeOrFail a d
-  r <- sizeRecursively (a { key = dirname $ key a })
-  pure $ r === [Sized (fromIntegral . BS.length $ T.encodeUtf8 d) a]
-
+-- TODO This is incredible slow
+prop_concat :: Property
 prop_concat =
-  once . testAWS $ do
+  withTests 1 . property . liftAWS $ do
     a <- newAddress
     b <- newAddress
     c <- newAddress
@@ -130,425 +177,597 @@ prop_concat =
       bs10k = BS.concat $ L.replicate 10000 "fred"
     liftIO $ withFile s WriteMode $ \h ->
       replicateM_ 1000 (BS.hPut h bs10k)
-    uploadOrFail s a
-    uploadOrFail s b
+    lift $ uploadOrFail s a
+    lift $ uploadOrFail s b
 
-    eitherT (fail . show . renderConcatError) pure $ concatMultipart Fail 1 [a, b] c
+    r <- lift . runExceptT $ concatMultipart Fail 1 [a, b] c
+    () <- either (fail . show . renderConcatError) pure r
 
-    eitherT (fail . show) pure $ download c d
+    lift $ downloadOrFail c d
     s' <- liftIO $ LBS.readFile s
     d' <- liftIO $ LBS.readFile d
-    pure $ (sha1 (LBS.concat [s', s']) === sha1 d')
+    sha1 (LBS.concat [s', s']) === sha1 d'
 
+prop_concat_empty_input :: Property
 prop_concat_empty_input =
-  testAWS $ do
+  withTests 2 . property . liftAWS $ do
     a <- newAddress
-    r <- runEitherT $ concatMultipart Fail 1 [] a
-    pure $ case r of
+    r <- lift . runExceptT $ concatMultipart Fail 1 [] a
+    case r of
       Left NoInputFiles ->
-        property True
+        success
       _ ->
-        failWith "concat didn't fail correctly"
+        annotate "concat didn't fail correctly" >> failure
 
+prop_concat_empty_input_files :: Property
 prop_concat_empty_input_files =
-  testAWS $ do
+  withTests 2 . property . liftAWS $ do
     a <- newAddress
     b <- newAddress
-    writeOrFail a ""
-    r <- runEitherT $ concatMultipart Fail 1 [a] b
-    pure $ case r of
+    lift $ writeOrFail a ""
+    r <- lift . runExceptT $ concatMultipart Fail 1 [a] b
+    case r of
       Left NoInputFilesWithData ->
-        property True
+        success
       _ ->
-        failWith "concat didn't fail correctly"
+        annotate "concat didn't fail correctly" >> failure
 
-prop_copy t = testAWS $ do
-  a <- newAddress
-  b <- newAddress
-  writeOrFail a t
-  eitherT (fail . T.unpack . renderCopyError) pure $ copy a b
-  a' <- read a
-  b' <- read b
-  pure $ a' === b'
+prop_copy :: Property
+prop_copy =
+  withTests 2 . property . liftAWS $ do
+    t <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    a <- newAddress
+    b <- newAddress
+    lift $ writeOrFail a t
+    lift $ either (fail . T.unpack . renderCopyError) pure =<< runExceptT (copy a b)
+    a' <- lift $ read a
+    b' <- lift $ read b
+    a' === b'
 
-prop_copy_missing = testAWS $ do
-  a <- newAddress
-  r <- runEitherT $ copy a a
-  pure $ case r of
-    Left (CopySourceMissing b) ->
-      a === b
-    _ ->
-      failWith "Copy didn't fail correctly"
+prop_copy_missing :: Property
+prop_copy_missing =
+  withTests 2 . property . liftAWS $ do
+    a <- newAddress
+    r <- lift . runExceptT $ copy a a
+    case r of
+      Left (CopySourceMissing b) ->
+        a === b
+      _ ->
+        annotate "Copy didn't fail correctly" >> failure
 
-prop_copy_overwrite t t' = testAWS $ do
-  a <- newAddress
-  b <- newAddress
-  writeOrFail a t
-  writeOrFail b t'
-  eitherT (fail . T.unpack . renderCopyError) pure $ copyWithMode Overwrite a b
-  b' <- read b
-  pure $ b' === Just t
+prop_copy_overwrite :: Property
+prop_copy_overwrite =
+  withTests 2 . property . liftAWS $ do
+    t <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    t' <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    a <- newAddress
+    b <- newAddress
+    lift $ writeOrFail a t
+    lift $ writeOrFail b t'
+    lift $ either (fail . T.unpack . renderCopyError) pure =<< runExceptT (copyWithMode Overwrite a b)
+    b' <- lift $ read b
+    b' === Just t
 
-prop_copy_fail t = testAWS $ do
-  a <- newAddress
-  b <- newAddress
-  writeOrFail a t
-  writeOrFail b t
-  r <- runEitherT $ copyWithMode Fail a b
-  pure $ case r of
-    Left (CopyDestinationExists z) ->
-      b === z
-    _ ->
-      failWith "Copy didn't failure correctly"
+prop_copy_fail :: Property
+prop_copy_fail =
+  withTests 2 . property . liftAWS $ do
+    t <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    a <- newAddress
+    b <- newAddress
+    lift $ writeOrFail a t
+    lift $ writeOrFail b t
+    r <- lift . runExceptT $ copyWithMode Fail a b
+    case r of
+      Left (CopyDestinationExists z) ->
+        b === z
+      _ ->
+        annotate "Copy didn't failure correctly" >> failure
 
-prop_copy_multipart = forAll ((,,) <$> arbitrary <*> elements colours <*> elements muppets) $ \(bs, c, m) -> (BS.length bs /= 0) ==> testAWS $ do
-  f <- newFilePath
-  a' <- newAddress
-  let a = withKey (// Key c) a'
+prop_copy_multipart :: Property
+prop_copy_multipart =
+  withTests 1 . property . liftAWS $ do
+    c <- forAll $ Gen.text (Range.linear 10 20) Gen.alphaNum
+    m <- forAll $ Gen.text (Range.linear 20 30) Gen.alphaNum
+    bs <- forAll $ Gen.utf8 (Range.linear 1 100) Gen.unicodeAll
+
+    f <- newFilePath
+    a' <- newAddress
+    let
+      a = withKey (// Key c) a'
       b = withKey (// Key m) a'
       s = f </> T.unpack c
       d = f </> T.unpack m
-  -- create large file to copy
-  liftIO $ D.createDirectoryIfMissing True f
-  liftIO $ withFile s WriteMode $ \h ->
-    replicateM_ 1000 (LBS.hPut h (LBS.fromChunks . return $ (BS.concat . L.replicate 10000 $ bs)))
-  liftIO . putStrLn $ "Generated file"
+    -- create large file to copy
+    liftIO $ D.createDirectoryIfMissing True f
+    liftIO $ withFile s WriteMode $ \h ->
+      replicateM_ 1000 (LBS.hPut h (LBS.fromChunks . return $ (BS.concat . L.replicate 10000 $ bs)))
+    liftIO . putStrLn $ "Generated file"
 
-  uploadOrFail s a
-  liftIO . putStrLn $ "Uploaded file"
+    lift $ uploadOrFail s a
+    liftIO . putStrLn $ "Uploaded file"
 
-  liftIO . putStrLn $ "Running copy ..."
-  eitherT (fail . T.unpack . renderCopyError) pure $ copy a b
+    liftIO . putStrLn $ "Running copy ..."
+    lift $ either (fail . T.unpack . renderCopyError) pure =<< runExceptT (copy a b)
 
-  liftIO . putStrLn $ "Done copy"
-  -- compare
-  eitherT (fail . show) pure $ download b d
-  liftIO . putStrLn $ "Done download"
+    liftIO . putStrLn $ "Done copy"
+    -- compare
+    lift $ either (fail . show) pure =<< runExceptT (download b d)
+    liftIO . putStrLn $ "Done download"
 
-  s' <- liftIO $ LBS.readFile s
-  d' <- liftIO $ LBS.readFile d
-  pure $ (sha1 s' === sha1 d')
+    s' <- liftIO $ LBS.readFile s
+    d' <- liftIO $ LBS.readFile d
+    sha1 s' === sha1 d'
 
-prop_move t = testAWS $ do
-  s <- newAddress
-  d <- newAddress
-  writeOrFail s t
-  eitherT (fail . T.unpack . renderCopyError) pure $ move s d
-  es <- exists s
-  ed <- exists d
-  pure $ (es, ed) === (False, True)
 
-prop_upload_mode d l m = testAWS $ do
-  p <- newFilePath
-  a <- newAddress
-  let t = p </> localPath l
-  liftIO . D.createDirectoryIfMissing True $ F.takeDirectory t
-  liftIO $ T.writeFile t d
-  uploadWithModeOrFail m t a
-  r <- read a
-  pure $ r === Just d
 
-prop_upload_overwrite d1 d2 l = testAWS $ do
-  p <- newFilePath
-  a <- newAddress
-  let t = p </> localPath l
-  liftIO . D.createDirectoryIfMissing True $ F.takeDirectory t
-  liftIO $ T.writeFile t d1
-  uploadWithModeOrFail Fail t a
-  liftIO $ T.writeFile t d2
-  uploadWithModeOrFail Overwrite t a
-  r <- read a
-  pure $ r === Just d2
+prop_move :: Property
+prop_move =
+  withTests 2 . property . liftAWS $ do
+    t <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    s <- newAddress
+    d <- newAddress
+    lift $ writeOrFail s t
+    lift $ either (fail . T.unpack . renderCopyError) pure =<< runExceptT (move s d)
+    es <- lift $ exists s
+    ed <- lift $ exists d
+    (es, ed) === (False, True)
 
-prop_upload_fail d l = testAWS $ do
-  p <- newFilePath
-  a <- newAddress
-  let t = p </> localPath l
-  liftIO . D.createDirectoryIfMissing True $ F.takeDirectory t
-  liftIO $ T.writeFile t d
-  uploadWithModeOrFail Fail t a
-  r <- runEitherT $ uploadWithMode Fail t a
-  pure $ case r of
-    Left (UploadDestinationExists _) ->
-      property True
-    _ ->
-      failWith "Upload succeded but should have failed"
+prop_upload_mode :: Property
+prop_upload_mode =
+  withTests 2 . property . liftAWS $ do
+    d <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    l <- forAll $ genLocalPath
+    m <- forAll $ Gen.genWriteMode
 
-prop_upload d l = testAWS $ do
-  p <- newFilePath
-  a <- newAddress
-  let t = p </> localPath l
-  liftIO . D.createDirectoryIfMissing True $ F.takeDirectory t
-  liftIO $ T.writeFile t d
-  uploadOrFail t a
-  r <- read a
-  pure $ r === Just d
+    p <- newFilePath
+    a <- newAddress
+    let
+      t = p </> localPath l
+    liftIO . D.createDirectoryIfMissing True $ F.takeDirectory t
+    liftIO $ T.writeFile t d
+    lift $ uploadWithModeOrFail m t a
+    r <- lift $ read a
+    r === Just d
 
-prop_upload_multipart l = forAll arbitrary $ \bs -> testAWS $ do
-  p <- newFilePath
-  a <- newAddress
-  let t = p </> localPath l
-  liftIO . D.createDirectoryIfMissing True $ F.takeDirectory t
-  liftIO $ withFile t WriteMode $ \h ->
-    replicateM_ 1000 (LBS.hPut h (LBS.fromChunks . return $ (BS.concat . L.replicate 10000 $ bs)))
-  uploadOrFail t a
-  exists a
+prop_upload_overwrite :: Property
+prop_upload_overwrite =
+  withTests 2 . property . liftAWS $ do
+    d1 <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    d2 <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    l <- forAll $ genLocalPath
 
-prop_abort_multipart = testAWS $ do
-  (a, i) <- newMultipart
-  sendMultipart "" a 1 i
-  l <- listMultiparts (bucket a)
-  forM_ (findMultiparts i l) $ abortCheck i (bucket a) 3
-  r <- listMultiparts (bucket a)
-  pure $
-     (P.filter (== Just i) . fmap (^. A.muUploadId) $ l) === [Just i] .&&.
-      findMultiparts i r === []
-  where
-    abortCheck i b n u = do
-      abortMultipart b u
-      r <- listMultiparts b
-      unless (n <= (0 :: Int) || L.null (findMultiparts i r)) $ do
-        liftIO $ threadDelay 500000
-        abortCheck i b (n-1) u
+    p <- newFilePath
+    a <- newAddress
+    let t = p </> localPath l
+    liftIO . D.createDirectoryIfMissing True $ F.takeDirectory t
+    liftIO $ T.writeFile t d1
+    lift $ uploadWithModeOrFail Fail t a
+    liftIO $ T.writeFile t d2
+    lift $ uploadWithModeOrFail Overwrite t a
+    r <- lift $ read a
+    r === Just d2
 
-prop_list_multipart = testAWS $ do
-  (a, i) <- newMultipart
-  sendMultipart "" a 1 i
-  l <- listMultiparts (bucket a)
-  pure $ multipartExists i l
+prop_upload_fail :: Property
+prop_upload_fail =
+  withTests 2 . property . liftAWS $ do
+    d <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    l <- forAll $ genLocalPath
 
-prop_list_parts = testAWS $ do
-  (a, i) <- newMultipart
-  sendMultipart "" a 1 i
-  l2 <- listMultipartParts a i
-  pure (length l2 === 1)
+    p <- newFilePath
+    a <- newAddress
+    let t = p </> localPath l
+    liftIO . D.createDirectoryIfMissing True $ F.takeDirectory t
+    liftIO $ T.writeFile t d
+    lift $ uploadWithModeOrFail Fail t a
+    r <- lift . runExceptT $ uploadWithMode Fail t a
+    case r of
+      Left (UploadDestinationExists _) ->
+        success
+      _ ->
+        annotate "Upload succeded but should have failed" >> failure
 
-multipartExists :: Text -> [A.MultipartUpload] -> Property
+prop_upload :: Property
+prop_upload =
+  withTests 2 . property . liftAWS $ do
+    d <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    l <- forAll $ genLocalPath
+    p <- newFilePath
+    a <- newAddress
+    let t = p </> localPath l
+    liftIO . D.createDirectoryIfMissing True $ F.takeDirectory t
+    liftIO $ T.writeFile t d
+    lift $ uploadOrFail t a
+    r <- lift $ read a
+    r === Just d
+
+prop_upload_multipart :: Property
+prop_upload_multipart =
+  withTests 2 . property . liftAWS $ do
+    bs <- forAll $ Gen.utf8 (Range.linear 0 100) Gen.unicodeAll
+    l <- forAll $ genLocalPath
+
+    p <- newFilePath
+    a <- newAddress
+    let t = p </> localPath l
+    liftIO . D.createDirectoryIfMissing True $ F.takeDirectory t
+    liftIO $ withFile t WriteMode $ \h ->
+      replicateM_ 1000 (LBS.hPut h (LBS.fromChunks . return $ (BS.concat . L.replicate 10000 $ bs)))
+    lift $ uploadOrFail t a
+    result <- lift $ exists a
+    assert result
+
+prop_abort_multipart :: Property
+prop_abort_multipart =
+  withTests 2 . property . liftAWS $ do
+
+    (a, i) <- newMultipart
+    lift $ sendMultipart "" a 1 i
+    l <- lift $ listMultiparts (bucket a)
+    let
+      abortCheck :: Text -> Bucket -> Int -> A.MultipartUpload -> AWS ()
+      abortCheck x b n u = do
+        abortMultipart b u
+        r <- listMultiparts b
+        unless (n <= (0 :: Int) || L.null (findMultiparts x r)) $ do
+          liftIO $ threadDelay 500000
+          abortCheck x b (n-1) u
+
+    lift . forM_ (findMultiparts i l) $
+      abortCheck i (bucket a) 3
+
+    r <- lift $ listMultiparts (bucket a)
+
+    (L.filter (== Just i) . fmap (^. A.muUploadId) $ l) === [Just i]
+
+    findMultiparts i r === []
+
+
+
+prop_list_multipart :: Property
+prop_list_multipart =
+  withTests 2 . property . liftAWS $ do
+    (a, i) <- newMultipart
+    lift $ sendMultipart "" a 1 i
+    l <- lift $ listMultiparts (bucket a)
+    multipartExists i l
+
+prop_list_parts :: Property
+prop_list_parts =
+  withTests 2 . property . liftAWS $ do
+    (a, i) <- newMultipart
+    lift $ sendMultipart "" a 1 i
+    l2 <- lift $ listMultipartParts a i
+    length l2 === 1
+
+
+
+multipartExists :: Monad m => Text -> [A.MultipartUpload] -> PropertyT m ()
 multipartExists uploadId multiparts =
-  P.count (findMultipart uploadId) multiparts === 1
+  L.length (L.filter (findMultipart uploadId) multiparts) === 1
 
 findMultiparts :: Text -> [A.MultipartUpload] -> [A.MultipartUpload]
 findMultiparts uploadId =
-  P.filter (findMultipart uploadId)
+  L.filter (findMultipart uploadId)
 
 findMultipart :: Text -> A.MultipartUpload -> Bool
 findMultipart uploadId m =
   m ^. A.muUploadId == Just uploadId
 
-prop_list = forAll ((,) <$> elements muppets <*> elements southpark) $ \(m, s) -> testAWS $ do
-  a <- newAddress
-  writeOrFail (withKey (// Key m) a) ""
-  writeOrFail (withKey (// (Key s // Key m)) a) ""
-  r' <- list a
-  pure $ (Just . Key <$> [m, s <> "/"]) === (removeCommonPrefix a <$> r')
 
-prop_listObjects = forAll ((,) <$> elements muppets <*> elements southpark) $ \(m, s) -> testAWS $ do
-  a <- newAddress
-  writeOrFail (withKey (// Key m) a) ""
-  writeOrFail (withKey (// (Key s // Key m)) a) ""
-  (p, k) <- listObjects a
-  pure $ ([Just . Key $ s <> "/"], [Just $ Key m]) === (removeCommonPrefix a <$> p, removeCommonPrefix a <$> k)
+prop_list :: Property
+prop_list =
+  withTests 2 . property . liftAWS $ do
+    m <- forAll $ Gen.text (Range.linear 10 20) Gen.alphaNum
+    s <- forAll $ Gen.text (Range.linear 20 30) Gen.alphaNum
+    a <- newAddress
+    lift $ writeOrFail (withKey (// Key m) a) ""
+    lift $ writeOrFail (withKey (// (Key s // Key m)) a) ""
+    r' <- lift $ list a
+    (Just . Key <$> [m, s <> "/"]) === (removeCommonPrefix a <$> r')
 
-prop_list_recursively = testAWS $ do
-  a <- newAddress
-  writeOrFail a ""
-  r' <- listRecursively (a { key = dirname $ key a })
-  pure $ a `elem` r'
+prop_listObjects :: Property
+prop_listObjects =
+  withTests 2 . property . liftAWS $ do
+    m <- forAll $ Gen.text (Range.linear 10 20) Gen.alphaNum
+    s <- forAll $ Gen.text (Range.linear 20 30) Gen.alphaNum
+    a <- newAddress
+    lift $ writeOrFail (withKey (// Key m) a) ""
+    lift $ writeOrFail (withKey (// (Key s // Key m)) a) ""
+    (p, k) <- lift $ listObjects a
+    ([Just . Key $ s <> "/"], [Just $ Key m]) === (removeCommonPrefix a <$> p, removeCommonPrefix a <$> k)
 
-prop_list_forbidden_bucket = testAWS $ do
-  _ <- write (Address (Bucket "ambiata-dev-view") (Key "")) ""
-  pure $ True
+prop_list_recursively :: Property
+prop_list_recursively =
+  withTests 2 . property . liftAWS $ do
+    a <- newAddress
+    lift $ writeOrFail a ""
+    r' <- lift $ listRecursively (a { key = dirname $ key a })
+    assert $ a `elem` r'
 
-prop_download d l = testAWS $ do
-  p <- newFilePath
-  a <- newAddress
-  let t = p </> localPath l
-  writeOrFail a d
-  r <- runEitherT $ download a t
-  res <- liftIO $ T.readFile t
-  pure $ (isRight r, res) === (True, d)
+prop_list_forbidden_bucket :: Property
+prop_list_forbidden_bucket =
+  withTests 1 . property . liftAWS $ do
+    _ <- lift $ write (Address (Bucket "ambiata-dev-view") (Key "")) ""
+    success
 
-prop_download_multipart :: Property
-prop_download_multipart = forAll ((,,) <$> arbitrary <*> elements colours <*> elements muppets) $ \(bs, c, m) ->
-  (BS.length bs /= 0) ==> testAWS $ do
+prop_download :: Property
+prop_download =
+  withTests 1 . property . liftAWS $ do
+    d <- forAll $ Gen.text (Range.linear 10 20) Gen.alphaNum
+    l <- forAll $ genLocalPath
     p <- newFilePath
     a <- newAddress
-    let t = p </> unpack c
-    let o = p </> unpack m
+    let t = p </> localPath l
+    lift $ writeOrFail a d
+    r <- lift . runExceptT $ download a t
+    res <- liftIO $ T.readFile t
+
+    assert $ isRight r
+    res === d
+
+prop_download_multipart :: Property
+prop_download_multipart =
+  withTests 1 . property . liftAWS $ do
+    c <- forAll $ Gen.text (Range.linear 10 20) Gen.alphaNum
+    m <- forAll $ Gen.text (Range.linear 20 30) Gen.alphaNum
+    bs <- forAll $ Gen.utf8 (Range.linear 1 100) Gen.unicodeAll
+
+    p <- newFilePath
+    a <- newAddress
+    let t = p </> T.unpack c
+    let o = p </> T.unpack m
     liftIO . D.createDirectoryIfMissing True $ F.takeDirectory t
     liftIO . D.createDirectoryIfMissing True $ F.takeDirectory o
     liftIO $ withFile t WriteMode $ \h ->
       replicateM_ 1000 (LBS.hPut h (LBS.fromChunks . return $ (BS.concat . L.replicate 10000 $ bs)))
     sz <- liftIO . withFile t ReadMode $ hFileSize
-    uploadOrFail t a
+    lift $ uploadOrFail t a
 
-    let ten :: Int = 10
+    let ten :: Integer = 10
 
-    r <- runEitherT $ multipartDownload a o (fromInteger sz) (toInteger ten) 100
+    r <- lift . runExceptT $ multipartDownload a o (fromInteger sz) ten 100
     b <- liftIO $ LBS.readFile t
 
     let b' = sha1 b
     o' <- liftIO $ LBS.readFile o
     let o'' = sha1 o'
-    pure $ (isRight r, b') === (True, o'')
+
+    assert $ isRight r
+    b' === o''
+
+prop_write_download_overwrite :: Property
+prop_write_download_overwrite =
+  withTests 2 . property . liftAWS $ do
+    old <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    new <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    l <- forAll $ genLocalPath
+    p <- newFilePath
+    a <- newAddress
+    let t = p </> localPath l
+    lift $ writeOrFail a old
+    x <- lift . runExceptT $ downloadWithMode Fail a t
+    lift $ writeWithModeOrFail Overwrite a new
+    y <- lift . runExceptT $ downloadWithMode Overwrite a t
+    r <- liftIO $ T.readFile t
+
+    assert $ isRight x
+    assert $ isRight y
+    r === new
 
 
-prop_write_download_overwrite old new l = testAWS $ do
-  p <- newFilePath
-  a <- newAddress
-  let t = p </> localPath l
-  writeOrFail a old
-  x <- runEitherT $ downloadWithMode Fail a t
-  writeWithModeOrFail Overwrite a new
-  y <- runEitherT $ downloadWithMode Overwrite a t
-  r <- liftIO $ T.readFile t
-  pure $ (isRight x, isRight y, r) === (True, True, new)
+prop_write_download_fail :: Property
+prop_write_download_fail =
+  withTests 2 . property . liftAWS $ do
+    old <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    new <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    l <- forAll $ genLocalPath
+    p <- newFilePath
+    a <- newAddress
+    let t = p </> localPath l
+    lift $ writeOrFail a old
+    x <- lift . runExceptT $ downloadWithMode Fail a t
+    lift $ writeWithModeOrFail Overwrite a new
+    y <- lift . runExceptT $ downloadWithMode Fail a t
 
-prop_write_download_fail old new l = testAWS $ do
-  p <- newFilePath
-  a <- newAddress
-  let t = p </> localPath l
-  writeOrFail a old
-  x <- runEitherT $ downloadWithMode Fail a t
-  writeWithModeOrFail Overwrite a new
-  y <- runEitherT (downloadWithMode Fail a t)
-  pure $ (isRight x, isLeft y) === (True, True)
+    assert $ isRight x
+    assert $ isLeft y
 
-prop_delete w = testAWS $ do
-  a <- newAddress
-  writeWithModeOrFail w a ""
-  x <- exists a
-  delete a
-  y <- exists a
-  pure $ (x, y) === (True, False)
+prop_delete :: Property
+prop_delete =
+  withTests 2 . property . liftAWS $ do
+    w <- forAll Gen.genWriteMode
+    a <- newAddress
+    lift $ writeWithModeOrFail w a ""
+    x <- lift $ exists a
+    lift $ delete a
+    y <- lift $ exists a
+    assert x
+    assert $ not y
 
-prop_delete_empty = testAWS $ do
-  a <- newAddress
-  (True <$ delete a) `catchAll` (const . pure $ False)
+prop_delete_empty :: Property
+prop_delete_empty =
+  withTests 2 . property . liftAWS $ do
+    a <- newAddress
+    result <- (True <$ lift (delete a)) `catchAll` (const . pure $ False)
+    assert result
 
-prop_read_write d = testAWS $ do
-  a <- newAddress
-  writeOrFail a d
-  r <- read a
-  pure $ r === Just d
+prop_read_write :: Property
+prop_read_write =
+  withTests 2 . property . liftAWS $ do
+    d <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    a <- newAddress
+    lift $ writeOrFail a d
+    r <- lift $ read a
+    r === Just d
 
-prop_write_failure d = testAWS $ do
-  a <- newAddress
-  writeOrFail a d
-  r <- write a d
-  pure $ r === WriteDestinationExists a
+prop_write_failure :: Property
+prop_write_failure =
+  withTests 2 . property . liftAWS $ do
+    d <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    a <- newAddress
+    lift $ writeOrFail a d
+    r <- lift $ write a d
+    r === WriteDestinationExists a
 
-prop_write_overwrite (UniquePair x y) = testAWS $ do
-  a <- newAddress
-  writeWithModeOrFail Fail a x
-  writeWithModeOrFail Overwrite a y
-  r <- read a
-  pure $ r === pure y
+prop_write_overwrite :: Property
+prop_write_overwrite =
+  withTests 2 . property . liftAWS $ do
+    let
+      gen = Gen.text (Range.constant 5 15) Gen.alphaNum
+    items <- fmap toList . forAll $ Gen.set (Range.constant 2 2) gen
+    (x, y) <- case items of
+      x : y : [] ->
+        pure (x, y)
+      _ ->
+        annotate "Invariant generator." >> failure
 
-prop_sync_overwrite = forAll (elements muppets) $ \m -> testAWS $ do
-  a <- newAddress
-  b <- newAddress
-  createSmallFiles a m 10
-  x <- runEitherT $ syncWithMode OverwriteSync a b 1
-  y <- runEitherT $ syncWithMode OverwriteSync a b 1
-  mapM_ (\e -> exists e >>= \e' -> when (e' == False) (throwM . userError $ "Output files do not exist")) (files b m 10)
-  pure $ (isRight x, isRight y) === (True, True)
+    a <- newAddress
+    lift $ writeWithModeOrFail Fail a x
+    lift $ writeWithModeOrFail Overwrite a y
+    r <- lift $ read a
+    r === Just y
 
-prop_sync_fail = forAll (elements muppets) $ \m -> testAWS $ do
-  a <- newAddress
-  b <- newAddress
-  createSmallFiles a m 1
-  x <- runEitherT $ syncWithMode FailSync a b 1
-  y <- runEitherT $ syncWithMode FailSync a b 1
-  r <- pure $ case y of
-    (Left (SyncError (WorkerError (OutputExists q)))) ->
-      q == withKey (// Key (m <> "-1")) b
-    _ ->
-      False
-  pure $ (isRight x, r) === (True, True)
+prop_sync_overwrite :: Property
+prop_sync_overwrite =
+  withTests 2 . property . liftAWS $ do
+    m <- forAll $ Gen.text (Range.linear 5 20) Gen.alphaNum
+    a <- newAddress
+    b <- newAddress
+    createSmallFiles a m 10
+    x <- lift . runExceptT $ syncWithMode OverwriteSync a b 1
+    y <- lift . runExceptT $ syncWithMode OverwriteSync a b 1
+    lift . forM_ (files b m 10) $ \e ->
+      exists e >>= \e' ->
+        when (e' == False) $
+          (throwM . userError $ "Output files do not exist")
+
+    assert $ isRight x
+    assert $ isRight y
+
+
+prop_sync_fail :: Property
+prop_sync_fail =
+  withTests 2 . property . liftAWS $ do
+    m <- forAll $ Gen.text (Range.linear 5 20) Gen.alphaNum
+    a <- newAddress
+    b <- newAddress
+    createSmallFiles a m 1
+    x <- lift . runExceptT $ syncWithMode FailSync a b 1
+    y <- lift . runExceptT $ syncWithMode FailSync a b 1
+    case y of
+      (Left (SyncError (WorkerError (OutputExists q)))) ->
+        q === withKey (// Key (m <> "-1")) b
+      _ ->
+        failure
+    assert $ isRight x
+
 
 -- | If the object does not exist, then the behaviour should be invariant with the WriteMode
-prop_write_nonexisting w d = testAWS $ do
-  a <- newAddress
-  writeWithModeOrFail w a d
-  r <- read a
-  pure $ r === pure d
+prop_write_nonexisting :: Property
+prop_write_nonexisting =
+  withTests 2 . property . liftAWS $ do
+    w <- forAll Gen.genWriteMode
+    d <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    a <- newAddress
+    lift $ writeWithModeOrFail w a d
+    r <- lift $ read a
+    r === Just d
 
-prop_write_grant t = testAWS $ do
-  a <- newAddress
-  writeOrFail a t
-  grantReadAccess a $ ReadGrant "id=e3abd0cceaecbd471c3eaaa47bb722bf199296c5e41c9ee4222877cc91b536fc"
-  r <- read a
-  pure $ r === pure t
+prop_write_grant :: Property
+prop_write_grant =
+  withTests 2 . property . liftAWS $ do
+    t <- forAll $ Gen.text (Range.linear 0 100) Gen.alphaNum
+    a <- newAddress
+    lift $ writeOrFail a t
+    lift . grantReadAccess a $ ReadGrant "id=e3abd0cceaecbd471c3eaaa47bb722bf199296c5e41c9ee4222877cc91b536fc"
+    r <- lift $ read a
+    r === Just t
 
-prop_on_status_ok = testAWS $
-  do r <- onStatus_ (1 :: Int) handler (void (exists (Address (Bucket "ambiata-dev-view") (Key ""))))
-     return (r === 1)
-  where handler _ = Just 2
-
-prop_on_status_ko = testAWS $
-  do r <- onStatus_ (1 :: Int) handler (void (write missingAddress "text"))
-     return (r === 2)
-  where handler _ = Just 2
-
-prop_read_empty :: Key -> Property
-prop_read_empty k = ioProperty $ do
-  bucket' <- testBucket
-  t <- runAWSDefaultRegion . read $ Address bucket' k
-  pure $ t === Nothing
+prop_read_empty :: Property
+prop_read_empty =
+  withTests 1 . property $ do
+    k <- forAll Gen.genKey
+    bucket' <- liftIO testBucket
+    t <- liftIO . runAWSDefaultRegion . read $ Address bucket' k
+    t === Nothing
 
 prop_download_recursive :: Property
-prop_download_recursive = once . testAWS $ do
-  let name1 = "first name"
-      name2 = "second name"
-      name3 = "third name"
-  tmpdir <- newFilePath
-  addr <- withKey (// Key "top") <$> newAddress
-  writeOrFail (withKey (// Key "a") addr) name1
-  writeOrFail (withKey (// Key "b/c") addr) name2
-  writeOrFail (withKey (// Key "c/d/e") addr) name3
+prop_download_recursive =
+  withTests 1 . property . liftAWS $ do
+    let name1 = "first name"
+        name2 = "second name"
+        name3 = "third name"
+    tmpdir <- newFilePath
+    addr <- withKey (// Key "top") <$> newAddress
+    lift $ do
+      writeOrFail (withKey (// Key "a") addr) name1
+      writeOrFail (withKey (// Key "b/c") addr) name2
+      writeOrFail (withKey (// Key "c/d/e") addr) name3
 
-  eitherT (fail . show) pure $ downloadRecursive addr tmpdir
+    lift $ either (fail . show) pure =<< runExceptT (downloadRecursive addr tmpdir)
 
-  a <- liftIO $ T.readFile (tmpdir </> "a")
-  c <- liftIO $ T.readFile (tmpdir </> "b" </> "c")
-  e <- liftIO $ T.readFile (tmpdir </> "c" </> "d" </> "e")
+    a <- liftIO $ T.readFile (tmpdir </> "a")
+    c <- liftIO $ T.readFile (tmpdir </> "b" </> "c")
+    e <- liftIO $ T.readFile (tmpdir </> "c" </> "d" </> "e")
 
-  pure $ a === name1 .&&. c == name2 .&&. e == name3
+    a === name1
+    c === name2
+    e === name3
 
 prop_upload_recursive :: Property
-prop_upload_recursive = once . testAWS $ do
-  let name1 = "first name"
-      name2 = "second name"
-      name3 = "third name"
-  tmpdir <- newFilePath
-  liftIO $ do
-    D.createDirectoryIfMissing True (tmpdir </> "b")
-    D.createDirectoryIfMissing True (tmpdir </> "c" </> "d")
+prop_upload_recursive =
+  withTests 1 . property . liftAWS $ do
+    let name1 = "first name"
+        name2 = "second name"
+        name3 = "third name"
+    tmpdir <- newFilePath
+    liftIO $ do
+      D.createDirectoryIfMissing True (tmpdir </> "b")
+      D.createDirectoryIfMissing True (tmpdir </> "c" </> "d")
 
-    T.writeFile (tmpdir </> "a") name1
-    T.writeFile (tmpdir </> "b" </> "c") name2
-    T.writeFile (tmpdir </> "c" </> "d" </> "e") name3
+      T.writeFile (tmpdir </> "a") name1
+      T.writeFile (tmpdir </> "b" </> "c") name2
+      T.writeFile (tmpdir </> "c" </> "d" </> "e") name3
 
-  addr <- withKey (// Key "top") <$> newAddress
+    addr <- withKey (// Key "top") <$> newAddress
 
-  eitherT (fail . show) pure $ uploadRecursive tmpdir addr 2
+    lift $ either (fail . show) pure =<< runExceptT (uploadRecursive tmpdir addr 2)
 
-  a <- read (withKey (// Key "a") addr)
-  c <- read (withKey (// Key "b/c") addr)
-  e <- read (withKey (// Key "c/d/e") addr)
+    a <- lift $ read (withKey (// Key "a") addr)
+    c <- lift $ read (withKey (// Key "b/c") addr)
+    e <- lift $ read (withKey (// Key "c/d/e") addr)
 
-  pure $ a === Just name1 .&&. c == Just name2 .&&. e == Just name3
+    a === Just name1
+    c === Just name2
+    e === Just name3
+
+prop_on_status_ok :: Property
+prop_on_status_ok =
+  withTests 2 . property . liftAWS $ do
+    let
+      handler _ = Just 2
+    r <- lift $ onStatus_ (1 :: Int) handler (void (exists (Address (Bucket "ambiata-dev-view") (Key ""))))
+    r === 1
+
+prop_on_status_ko :: Property
+prop_on_status_ko =
+  withTests 2 . property . liftAWS $ do
+    let
+      handler _ = Just 2
+    r <- lift $ onStatus_ (1 :: Int) handler (void (write missingAddress "text"))
+    r === 2
 
 ----------
 -- HELPERS
 ----------
-missingAddress = Address (Bucket "ambiata-missing") (Key "m")
+missingAddress :: Address
+missingAddress =
+  Address (Bucket "ambiata-missing") (Key "m")
 
 sha1 :: LBS.ByteString -> Digest SHA1
 sha1 =
   hashlazy
 
-return []
 tests :: IO Bool
-tests = $forAllProperties $ quickCheckWithResult (stdArgs { maxSuccess = 10 })
+tests =
+  checkParallel $$(discover)

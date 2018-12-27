@@ -2,40 +2,23 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-module Test.Reliability.Reliability where
+module Test.Reliability.Reliability (
+    testSize
+  , getMaxSuccess
+  ) where
 
-import           Control.Monad.IO.Class
+import           Control.Monad.IO.Class (MonadIO, liftIO)
 
-import           Mismi.Control
-import           Mismi.S3
+import           Hedgehog
 
 import           P
 import qualified Prelude as P
 
-import           System.IO
 import           System.Environment
 
-import           Test.Mismi
-import           Test.Mismi.S3
-import           Test.QuickCheck
-
-testS3 :: Testable a => (Address -> Int -> AWS a) -> Property
-testS3 f = testAWS $ do
-  a <- newAddress
-  i <- liftIO $ testSize
-  f a i
-
-testAWS' :: Testable a => (Address -> Address -> Int -> AWS a) -> Property
-testAWS' f = testAWS $ do
-  a <- newAddress
-  b <- newAddress
-  i <- liftIO $ testSize
-  f a b i
-
-testSize :: IO Int
+testSize :: MonadIO m => PropertyT m Int
 testSize = do
-  view <- lookupEnv "TEST_RELIABILITY_SIZE"
+  view <- liftIO $ lookupEnv "TEST_RELIABILITY_SIZE"
   let x = maybe 10 P.read view
   pure x
 

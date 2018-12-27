@@ -57,11 +57,11 @@ import           Mismi.S3.Core.Data (Address (..), Bucket (..), Key (..), ReadGr
                                     , addressFromText, addressToText, basename, combineKey
                                     , dirname, foldSyncMode, foldWriteMode, removeCommonPrefix
                                     , s3Parser, withKey)
+import           Mismi.S3.Internal.Parallel (RunError (..), renderRunError)
 import           Network.AWS.S3 (ETag, ServerSideEncryption (..))
 
 import           System.FilePath (FilePath)
 
-import           Twine.Parallel (RunError (..), renderRunError)
 
 
 data PartResponse =
@@ -177,7 +177,7 @@ renderConcatError e =
       T.intercalate " " [
           "Source file"
         , addressToText a
-        , "(" <> renderIntegral s <> ") bytes"
+        , "(" <> T.pack (show s) <> ") bytes"
         , "is too small to use as part of a multipart upload."
         ]
 

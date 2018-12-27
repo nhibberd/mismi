@@ -1,43 +1,32 @@
-name:                  mismi-s3-test
-version:               0.0.1
-cabal-version:         >= 1.8
-build-type:            Simple
+version: 0.0.1
+
+name:
+  mismi-s3-test
+
+cabal-version:
+  >= 1.8
+build-type:
+  Simple
 
 library
   build-depends:
-                       base                            >= 3          && < 6
-                     , amazonka                        >= 1.3.6      && < 1.6
-                     , amazonka-core                   >= 1.3.6      && < 1.6
-                     , amazonka-s3                     >= 1.3.6      && < 1.6
-                     , ambiata-disorder-core
-                     , ambiata-disorder-corpus
-                     , mismi-core
-                     , mismi-core-test
-                     , mismi-s3
-                     , mismi-s3-core
-                     , mismi-s3-core-test
-                     , mismi-p
-                     , ambiata-x-eithert
-                     , ambiata-twine
-                     , lens                            >= 4.8        && < 4.16
-                     , conduit                         == 1.2.*
-                     , time                            >= 1.4        && < 1.9
-                     , exceptions                      >= 0.6        && < 0.9
-                     , filepath                        >= 1.3        && < 1.5
-                     , http-client                     >= 0.4.18     && < 0.6
-                     , text                            == 1.2.*
-                     , transformers                    >= 0.3        && < 0.6
-                     , QuickCheck                      >= 2.7        && < 2.10
-                     , quickcheck-instances            == 0.3.*
-                     , unix                            == 2.7.*
-                     , temporary                       == 1.2.*
-                     , uuid                            == 1.3.*
-                     , mtl                             >= 2.1        && < 2.3
-                     , resourcet
-                     , directory                       == 1.2.*
+      base                            >= 3          && < 5
+    , mismi-core
+    , mismi-core-test
+    , mismi-s3
+    , mismi-p
+    , hedgehog
+    , directory                       >= 1.2        && < 1.4
+    , exceptions                      >= 0.7        && < 0.11
+    , filepath                        >= 1.3        && < 1.5
+    , mtl                             >= 2.1        && < 2.3
+    , resourcet                       >= 1.1        && < 1.3
+    , text                            == 1.2.*
+    , transformers                    >= 0.3.1      && < 0.6
+    , unix                            == 2.7.*
+    , uuid                            == 1.3.*
 
 
   exposed-modules:
-                     Test.Mismi.Amazonka
-                     Test.Mismi.S3
-                     Test.Mismi.S3.Arbitrary
+    Test.Mismi.Amazonka
+    Test.Mismi.S3
