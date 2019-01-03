@@ -20,7 +20,7 @@ before_install:
   - ./scripts/travis-install
 
 script:
-  - ./scripts/travis-build
+  - travis_wait 30 ./scripts/travis-build
 
 matrix:
   include:
