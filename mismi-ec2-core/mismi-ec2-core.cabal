@@ -1,0 +1,76 @@
+version: 0.0.3
+
+name:
+  mismi-ec2-core
+
+author:
+  Nick Hibberd
+maintainer:
+  Nick Hibberd <nhibberd@gmail.com>
+homepage:
+  https://github.com/nhibberd/mismi
+bug-reports:
+  https://github.com/nhibberd/mismi/issues
+synopsis:
+  AWS Library
+description:
+  mismi-s3-core provides a set of data types around EC2 concepts and
+  useful functions over them.
+category:
+  AWS
+license:
+  BSD3
+license-file:
+  LICENSE
+cabal-version:
+  >= 1.8
+build-type:
+  Simple
+tested-with:
+    GHC == 8.2.2
+  , GHC == 8.4.3
+  , GHC == 8.6.3
+extra-source-files:
+  CHANGELOG.md
+
+library
+  build-depends:
+      base                            >= 3          && < 5
+    , mismi-p                         == 0.0.3.*
+    , base64-bytestring               == 1.0.*
+    , text                            >= 1.1        && < 1.3
+
+  ghc-options:
+    -Wall
+
+  hs-source-dirs:
+    src
+
+
+  exposed-modules:
+    Mismi.EC2.Core.Data
+    Mismi.EC2.Core.Device
+
+test-suite test
+  type:
+    exitcode-stdio-1.0
+
+  main-is:
+    test.hs
+
+  ghc-options:
+    -Wall -threaded -O2
+
+  hs-source-dirs:
+    test
+
+  other-modules:
+    Test.Mismi.EC2.Core.Data
+    Test.Mismi.EC2.Core.Gen
+
+  build-depends:
+      base                            >= 3          && < 5
+    , mismi-ec2-core
+    , mismi-p                         == 0.0.3.*
+    , hedgehog
+    , text                            >= 1.1        && < 1.3
