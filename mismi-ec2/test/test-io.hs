@@ -11,7 +11,7 @@ main = do
   hSetBuffering stdout LineBuffering
   hSetBuffering stderr LineBuffering
 
-  results <- sequence =<< Mismi.enableTests "AWS_TEST_S3" [] [
+  results <- sequence =<< Mismi.enableTests "AWS_TEST_EC2" [] [
       Test.IO.Mismi.EC2.Commands.tests
     ]
 
