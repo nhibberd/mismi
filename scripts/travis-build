@@ -8,6 +8,12 @@ stack --no-terminal --skip-ghc-check build \
     --test
 
 
+## TODO
+for SERVICE in mismi-p mismi-kernel mismi-core mismi-s3-core mismi-s3; do
+   stack sdist "${SERVICE}"
+   stack haddock --fast "${SERVICE}"
+done
+
 
 # cabal
 
