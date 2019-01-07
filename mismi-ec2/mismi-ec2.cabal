@@ -85,7 +85,7 @@ test-suite test
     , hedgehog
     , mismi-core                      == 0.0.3.*
     , mismi-core-test                 == 0.0.3.*
-    , mismi-ec2                       == 0.0.3.*
+    , mismi-ec2
     , mismi-ec2-core-test             == 0.0.3.*
     , mismi-p                         == 0.0.3.*
 
@@ -111,6 +111,6 @@ test-suite test-io
     , hedgehog
     , mismi-core                      == 0.0.3.*
     , mismi-core-test                 == 0.0.3.*
-    , mismi-ec2                       == 0.0.3.*
+    , mismi-ec2
     , mismi-p                         == 0.0.3.*
     , transformers                    >= 0.3.1      && < 0.6
