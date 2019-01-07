@@ -24,7 +24,7 @@ import           Test.Mismi
 prop_findSecurityGroupByName_found :: Property
 prop_findSecurityGroupByName_found =
   withTests 2 . property . liftAWS $ do
-    mid <- lift $ findSecurityGroupByName (SecurityGroupName "ci.ci.db")
+    mid <- lift $ findSecurityGroupByName (SecurityGroupName "default")
     isJust mid === True
 
 prop_findSecurityGroupByName_not_found :: Property
