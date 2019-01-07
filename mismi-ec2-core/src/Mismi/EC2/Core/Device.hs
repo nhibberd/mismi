@@ -61,6 +61,11 @@ instanceDeviceMappings I2_XLarge = devices1
 instanceDeviceMappings I2_2XLarge = devices2
 instanceDeviceMappings I2_4XLarge = devices4
 instanceDeviceMappings I2_8XLarge = devices8
+instanceDeviceMappings H1_2XLarge = devices1
+instanceDeviceMappings H1_4XLarge = devices2
+instanceDeviceMappings H1_8XLarge = devices4
+instanceDeviceMappings H1_16XLarge = devices8
+
 
 -- Extra
 instanceDeviceMappings C4_Large = devices0

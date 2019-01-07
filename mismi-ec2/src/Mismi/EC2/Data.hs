@@ -70,6 +70,14 @@ fromMismiInstanceType m =
       A.G2_2XLarge
     G2_8XLarge ->
       A.G2_8XLarge
+    H1_2XLarge ->
+      A.H1_2XLarge
+    H1_4XLarge ->
+      A.H1_4XLarge
+    H1_8XLarge ->
+      A.H1_8XLarge
+    H1_16XLarge ->
+      A.H1_16XLarge
     HI1_4XLarge ->
       A.HI1_4XLarge
     HS1_8XLarge ->
@@ -257,6 +265,14 @@ toMismiInstanceType i =
       G2_2XLarge
     A.G2_8XLarge ->
       G2_8XLarge
+    A.H1_2XLarge ->
+      H1_2XLarge
+    A.H1_4XLarge ->
+      H1_4XLarge
+    A.H1_8XLarge ->
+      H1_8XLarge
+    A.H1_16XLarge ->
+      H1_16XLarge
     A.HI1_4XLarge ->
       HI1_4XLarge
     A.HS1_8XLarge ->

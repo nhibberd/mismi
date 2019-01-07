@@ -115,6 +115,10 @@ data MismiInstanceType =
   | D2_XLarge
   | G2_2XLarge
   | G2_8XLarge
+  | H1_2XLarge
+  | H1_4XLarge
+  | H1_8XLarge
+  | H1_16XLarge
   | HI1_4XLarge
   | HS1_8XLarge
   | I2_2XLarge
@@ -374,6 +378,14 @@ virtualizationFor itype =
       HVM
     G3_8XLarge ->
       HVM
+    H1_2XLarge ->
+      HVM
+    H1_4XLarge ->
+      HVM
+    H1_8XLarge ->
+      HVM
+    H1_16XLarge ->
+      HVM
     I3_16XLarge ->
       HVM
     I3_2XLarge ->
@@ -459,6 +471,14 @@ renderMismiInstanceType m =
       "g2.2xlarge"
     G2_8XLarge ->
       "g2.8xlarge"
+    H1_2XLarge ->
+      "h1.2xlarge"
+    H1_4XLarge ->
+      "h1.4xlarge"
+    H1_8XLarge ->
+      "h1.8xlarge"
+    H1_16XLarge ->
+      "h1.16xlarge"
     HI1_4XLarge ->
       "hi1.4xlarge"
     HS1_8XLarge ->
@@ -644,6 +664,14 @@ parseMismiInstanceType m =
       Just G2_2XLarge
     "g2.8xlarge" ->
       Just G2_8XLarge
+    "h1.2xlarge" ->
+      Just H1_2XLarge
+    "h1.4xlarge" ->
+      Just H1_4XLarge
+    "h1.8xlarge" ->
+      Just H1_8XLarge
+    "h1.16xlarge" ->
+      Just H1_16XLarge
     "hi1.4xlarge" ->
       Just HI1_4XLarge
     "hs1.8xlarge" ->
