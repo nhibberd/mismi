@@ -1,0 +1,51 @@
+version: 0.0.4
+
+name:
+  mismi-dynamodb
+author:
+  Nick Hibberd
+maintainer:
+  Nick Hibberd <nhibberd@gmail.com>
+homepage:
+  https://github.com/nhibberd/mismi
+bug-reports:
+  https://github.com/nhibberd/mismi/issues
+synopsis:
+  AWS Library
+description:
+  mismi-dynamodb is a library that provides a set of common and useful
+  operations on top of AWS DynamoDB.
+category:
+  AWS
+license:
+  BSD3
+license-file:
+  LICENSE
+cabal-version:
+  >= 1.8
+build-type:
+  Simple
+tested-with:
+    GHC == 8.2.2
+  , GHC == 8.4.3
+  , GHC == 8.6.3
+extra-source-files:
+  CHANGELOG.md
+
+library
+  build-depends:
+      base                            >= 3          && < 6
+    , mismi-p
+    , mismi-core
+    , amazonka-dynamodb               >= 1.4.0      && < 1.7
+    , lens                            >= 4.8        && < 4.18
+
+  ghc-options:
+    -Wall
+
+  hs-source-dirs:
+    src
+
+  exposed-modules:
+    Mismi.DynamoDB.Amazonka
+    Mismi.DynamoDB.Control
