@@ -12,6 +12,7 @@ packages:
   - mismi-s3/test
   - mismi-ec2-core
   - mismi-ec2-core/test
+  - mismi-secretsmanager
 
 extra-deps:
   - git: https://github.com/brendanhay/amazonka.git
@@ -19,3 +20,5 @@ extra-deps:
     subdirs:
       - amazonka
       - core
+      - amazonka-s3
+      - amazonka-secretsmanager
