@@ -12,6 +12,7 @@ packages:
   - mismi-s3/test
   - mismi-ec2-core
   - mismi-ec2-core/test
+  - mismi-ec2
   - mismi-secretsmanager
 
 extra-deps:
@@ -21,4 +22,5 @@ extra-deps:
       - amazonka
       - core
       - amazonka-s3
+      - amazonka-ec2
       - amazonka-secretsmanager

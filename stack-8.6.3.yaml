@@ -13,6 +13,8 @@ packages:
   - mismi-ec2-core
   - mismi-ec2-core/test
   - mismi-secretsmanager
+  - mismi-ec2
+
 
 extra-deps:
   - git: https://github.com/brendanhay/amazonka.git
@@ -21,6 +23,7 @@ extra-deps:
       - amazonka
       - core
       - amazonka-s3
+      - amazonka-ec2
       - amazonka-secretsmanager
 
   - hedgehog-0.6.1
