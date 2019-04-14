@@ -14,6 +14,7 @@ packages:
   - mismi-ec2-core/test
   - mismi-secretsmanager
   - mismi-ec2
+  - mismi-sqs
 
 
 extra-deps:
@@ -25,5 +26,6 @@ extra-deps:
       - amazonka-s3
       - amazonka-ec2
       - amazonka-secretsmanager
+      - amazonka-sqs
 
   - hedgehog-0.6.1

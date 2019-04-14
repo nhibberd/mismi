@@ -1,0 +1,62 @@
+version: 0.0.3
+
+name:
+  mismi-sqs
+author:
+  Nick Hibberd
+maintainer:
+  Nick Hibberd <nhibberd@gmail.com>
+homepage:
+  https://github.com/nhibberd/mismi
+bug-reports:
+  https://github.com/nhibberd/mismi/issues
+synopsis:
+  AWS Library
+description:
+  mismi-sqs is a library that provides a set of common and useful
+  operations on top of AWS SQS.
+category:
+  AWS
+license:
+  BSD3
+license-file:
+  LICENSE
+cabal-version:
+  >= 1.8
+build-type:
+  Simple
+tested-with:
+    GHC == 8.2.2
+  , GHC == 8.4.3
+  , GHC == 8.6.3
+extra-source-files:
+  CHANGELOG.md
+
+library
+  build-depends:
+      base                            >= 3          && < 5
+    , mismi-core                      == 0.0.3.*
+    , mismi-kernel                    == 0.0.3.*
+    , mismi-p                         == 0.0.3.*
+    , template-haskell
+    , amazonka                        >= 1.5        && < 1.7
+    , amazonka-core                   >= 1.5        && < 1.7
+    , amazonka-sqs                    >= 1.5        && < 1.7
+    , exceptions                      >= 0.7        && < 0.11
+    , text                            == 1.2.*
+    , transformers                    >= 0.3.1      && < 0.6
+    , transformers-bifunctors         >= 0.1        && < 1
+    , lens                            >= 4.8        && < 4.18
+    , unordered-containers            >= 0.2.5      && < 0.3
+
+  ghc-options:
+    -Wall
+
+  hs-source-dirs:
+    src
+
+  exposed-modules:
+    Mismi.SQS.Amazonka
+    Mismi.SQS.Commands
+    Mismi.SQS.Data
+    Mismi.SQS.Error
