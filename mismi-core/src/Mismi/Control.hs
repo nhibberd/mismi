@@ -31,6 +31,7 @@ module Mismi.Control (
   , setRetry
   , configureRetries
   , handleServiceError
+  , handle400Error
   , withRetries
   , withRetriesOf
   , throwOrRetry
@@ -357,6 +358,21 @@ handleServiceError f pass action =
         throwM e
       TransportError _ ->
         throwM e
+
+
+handle400Error :: ErrorCode -> AWS a -> AWS (Maybe a)
+handle400Error code action =
+  let
+    check :: ServiceError -> Bool
+    check er =
+      let
+        httpStatus = _serviceStatus er == HTTP.status400
+        codeCheck = _serviceCode er == code
+      in
+        httpStatus && codeCheck
+  in
+    handleServiceError check (const Nothing) (Just <$> action)
+
 
 
 timeoutAWS :: Int -> AWS a -> AWS (Maybe a)
