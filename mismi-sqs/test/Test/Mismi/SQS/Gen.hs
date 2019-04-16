@@ -50,5 +50,11 @@ genQueueName =
 genSQSRegion :: Gen MismiRegion
 genSQSRegion =
   Gen.element [
-      OregonRegion
+      IrelandRegion
+    , TokyoRegion
+    , SingaporeRegion
+    , SydneyRegion
+    , NorthCaliforniaRegion
+    , OregonRegion
+    , NorthVirginiaRegion
     ]
