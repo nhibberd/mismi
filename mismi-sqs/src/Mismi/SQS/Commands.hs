@@ -22,6 +22,7 @@ import qualified Data.Text as T
 import qualified Data.HashMap.Strict as M
 
 import           Mismi (AWS, fromMismiRegion)
+import           Mismi.Control (handle400Error)
 import           Mismi.SQS.Amazonka as A hiding (createQueue, deleteQueue, deleteMessage)
 import qualified Mismi.SQS.Amazonka as A
 import           Mismi.SQS.Data
@@ -74,11 +75,23 @@ handleExists q =
 -- calls `createQueueRaw` to create the Queue.
 createQueue :: QueueName -> Maybe Visibility -> AWS QueueUrl
 createQueue q v = do
-  res <- send $ listQueues & lqQueueNamePrefix .~ Just (renderQueueName q)
-  maybe
-    (createQueueRaw q v)
-    (pure . QueueUrl)
-    (listToMaybe . List.filter (isMatchingQueueName q) $ res ^. lqrsQueueURLs)
+  let
+    handler =
+      handle400Error "AWS.SimpleQueueService.NonExistentQueue"
+
+  res <- handler . A.send $
+    listQueues
+      & lqQueueNamePrefix .~ Just (renderQueueName q)
+
+  case res of
+    Nothing ->
+      createQueue q v
+
+    Just res' ->
+      maybe
+        (createQueueRaw q v)
+        (pure . QueueUrl)
+        (listToMaybe . List.filter (isMatchingQueueName q) $ res' ^. lqrsQueueURLs)
 
 isMatchingQueueName :: QueueName -> Text -> Bool
 isMatchingQueueName q url =

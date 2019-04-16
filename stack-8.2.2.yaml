@@ -15,6 +15,7 @@ packages:
   - mismi-ec2
   - mismi-secretsmanager
   - mismi-sqs
+  - mismi-sqs/test
 
 extra-deps:
   - git: https://github.com/brendanhay/amazonka.git

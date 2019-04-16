@@ -15,6 +15,7 @@ packages:
   - mismi-secretsmanager
   - mismi-ec2
   - mismi-sqs
+  - mismi-sqs/test
 
 
 extra-deps:

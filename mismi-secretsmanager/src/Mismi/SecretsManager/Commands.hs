@@ -66,21 +66,8 @@ writeString path token string = do
 
 handleExists :: AWS a -> AWS (Maybe a)
 handleExists =
-  handleError "ResourceExists"
+  handle400Error "ResourceExists"
 
 handleMissing :: AWS a -> AWS (Maybe a)
 handleMissing =
-  handleError "ResourceNotFound"
-
-handleError :: ErrorCode -> AWS a -> AWS (Maybe a)
-handleError code action =
-  let
-    check :: ServiceError -> Bool
-    check er =
-      let
-        httpStatus = _serviceStatus er == HTTP.status400
-        codeCheck = _serviceCode er == code
-      in
-        httpStatus && codeCheck
-  in
-    handleServiceError check (const Nothing) (Just <$> action)
+  handle400Error "ResourceNotFound"
