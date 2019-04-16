@@ -1,8 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE PackageImports #-}
+
 module Test.IO.Mismi.SQS.Util (
     withQueue
   , withQueueUrl

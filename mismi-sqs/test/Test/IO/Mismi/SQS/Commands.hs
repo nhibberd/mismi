@@ -1,8 +1,8 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
+
 module Test.IO.Mismi.SQS.Commands (
     tests
   ) where
@@ -10,21 +10,17 @@ module Test.IO.Mismi.SQS.Commands (
 import           Control.Lens ((^.))
 import           Control.Monad.Trans.Class (lift)
 
-
 import           Hedgehog
---import qualified Hedgehog.Gen as Gen
---import qualified Hedgehog.Range as Range
 
 import           Mismi (AWS)
 import qualified Mismi.SQS.Amazonka as A
 import qualified Mismi.SQS.Commands as SQS
 import           Mismi.SQS.Data
 
-
 import           P
 
-import           Test.Mismi (liftAWS)
 import qualified Test.IO.Mismi.SQS.Util as Util
+import           Test.Mismi (liftAWS)
 import qualified Test.Mismi.SQS.Gen as Gen
 
 prop_write_read :: Property
