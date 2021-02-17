@@ -1,3 +1,6 @@
+## Version 0.0.4
+- Include `mismi-dynamodb`
+
 ## Version 0.0.3 (2018-12-27)
 
 - Add support for GHC 8.6.3
